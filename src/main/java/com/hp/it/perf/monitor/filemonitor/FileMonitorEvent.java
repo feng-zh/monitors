@@ -1,4 +1,4 @@
-package example;
+package com.hp.it.perf.monitor.filemonitor;
 
 import java.io.File;
 import java.util.EventObject;
@@ -7,14 +7,13 @@ public class FileMonitorEvent extends EventObject {
 
 	private static final long serialVersionUID = 1L;
 
-	// may be folder or file to be monitored
 	private File monitorFile;
 
-	// related to monitorFile
 	private FileMonitorMode monitorMode;
 
-	// the changed file
 	private File changedFile;
+
+	private Object changedFileKey;
 
 	public FileMonitorEvent(FileMonitorKey source) {
 		super(source);
@@ -46,8 +45,21 @@ public class FileMonitorEvent extends EventObject {
 		this.monitorFile = monitorFile;
 	}
 
-	protected void setMonitorMode(FileMonitorMode monitorMode) {
+	protected void setMode(FileMonitorMode monitorMode) {
 		this.monitorMode = monitorMode;
+	}
+
+	public Object getChangedFileKey() {
+		return changedFileKey;
+	}
+
+	protected void setChangedFileKey(Object changedFileKey) {
+		this.changedFileKey = changedFileKey;
+	}
+
+	public long getTickCount() {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 
 }

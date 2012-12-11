@@ -4,26 +4,36 @@ import java.io.Serializable;
 
 public class FileContentInfo implements Serializable {
 
-	private String fileContentKey;
+	// private String fileContentKey;
 
 	private String fileName;
-	
+
 	private long lastModified;
 
 	private long length;
 
-	private Object fileKey;
+	private transient Object fileKey;
 
-	public String getFileContentKey() {
-		return fileContentKey;
-	}
+	private long offset;
 
-	public void setFileContentKey(String fileContentKey) {
-		this.fileContentKey = fileContentKey;
-	}
+	// public String getFileContentKey() {
+	// return fileContentKey;
+	// }
+	//
+	// public void setFileContentKey(String fileContentKey) {
+	// this.fileContentKey = fileContentKey;
+	// }
 
 	public String getFileName() {
 		return fileName;
+	}
+
+	public long getOffset() {
+		return offset;
+	}
+
+	public void setOffset(long offset) {
+		this.offset = offset;
 	}
 
 	public void setFileName(String fileName) {

@@ -2,6 +2,8 @@ package example;
 
 import java.io.File;
 import java.lang.reflect.Constructor;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardWatchEventKinds;
@@ -15,9 +17,9 @@ import com.sun.nio.file.SensitivityWatchEventModifier;
 public class FileMonitor {
 
 	public static void main(String[] args) throws Exception {
-		// watchDir(".");
-		File file = new File("test.txt");
-		FileMonitors.getFileMetadata(file);
+		watchDir(".");
+		//File file = new File("test.txt");
+		//FileMonitors.getFileMetadata(file);
 	}
 
 	public static void watchDir(String dir) throws Exception {
@@ -66,11 +68,11 @@ public class FileMonitor {
 	}
 
 	private static WatchService createWatchService() throws Exception {
-		Class<?> watchServiceClass = Class
-				.forName("sun.nio.fs.PollingWatchService");
-		Constructor<?> constructor = watchServiceClass.getDeclaredConstructor();
-		constructor.setAccessible(true);
-		return (WatchService) constructor.newInstance();
-		// FileSystems.getDefault().newWatchService();
+//		Class<?> watchServiceClass = Class
+//				.forName("sun.nio.fs.PollingWatchService");
+//		Constructor<?> constructor = watchServiceClass.getDeclaredConstructor();
+//		constructor.setAccessible(true);
+//		return (WatchService) constructor.newInstance();
+		return new File(".").toPath().getFileSystem().newWatchService();
 	}
 }
