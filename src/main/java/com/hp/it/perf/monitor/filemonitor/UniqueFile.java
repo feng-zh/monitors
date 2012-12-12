@@ -186,7 +186,7 @@ public class UniqueFile implements FileContentProvider {
 		reader = new RandomAccessFileReader(file);
 		fileKey = FileMonitors.getKeyByFile(file);
 		if (monitorService != null) {
-			changeKey = monitorService.register(file, FileMonitorMode.CHANGE);
+			changeKey = monitorService.singleRegister(file, FileMonitorMode.CHANGE);
 			changeKey.addMonitorListener(updater);
 		} else {
 			// FIXME mock update event if no monitor service

@@ -28,7 +28,7 @@ public class FolderContentProvider implements FileContentProvider {
 	private Map<Object, UniqueFile> files = new HashMap<Object, UniqueFile>();
 
 	private FileMonitorService monitorService;
-
+	
 	public File getFolder() {
 		return folder;
 	}
@@ -50,7 +50,7 @@ public class FolderContentProvider implements FileContentProvider {
 		BlockingQueue<LineRecord> container = new ArrayBlockingQueue<LineRecord>(
 				1);
 		while (true) {
-			UniqueFile updated = (UniqueFile) updateNotifier.take();
+			FileContentProvider updated = updateNotifier.take();
 			int len = updated.readLines(container, 1);
 			if (len == 1) {
 				return container.poll();
@@ -69,7 +69,7 @@ public class FolderContentProvider implements FileContentProvider {
 		BlockingQueue<LineRecord> container = new ArrayBlockingQueue<LineRecord>(
 				1);
 		while (nanoTimeout > 0) {
-			UniqueFile updated = (UniqueFile) updateNotifier.poll(nanoTimeout,
+			FileContentProvider updated = updateNotifier.poll(nanoTimeout,
 					TimeUnit.NANOSECONDS);
 			nanoTimeout = totalNanoTimeout
 					- (System.nanoTime() - startNanoTime);
@@ -93,9 +93,8 @@ public class FolderContentProvider implements FileContentProvider {
 	public int readLines(Queue<LineRecord> list, int maxSize)
 			throws IOException {
 		int totalLen = 0;
-		UniqueFile updated;
-		while (maxSize > 0
-				&& (updated = (UniqueFile) updateNotifier.poll()) != null) {
+		FileContentProvider updated;
+		while (maxSize > 0 && (updated = updateNotifier.poll()) != null) {
 			// reset version
 			int len = updated.readLines(list, maxSize);
 			if (len == -1) {

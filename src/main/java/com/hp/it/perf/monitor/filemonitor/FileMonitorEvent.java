@@ -59,7 +59,7 @@ public class FileMonitorEvent extends EventObject {
 
 	public long getTickCount() {
 		// TODO Auto-generated method stub
-		return 0;
+		return System.currentTimeMillis();
 	}
 
 }

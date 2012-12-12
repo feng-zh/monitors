@@ -6,13 +6,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Observer;
 import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 public class CompositeContentProvider implements FileContentProvider {
 
 	private List<FileContentProvider> providers = new ArrayList<FileContentProvider>();
 
-	private ContentUpdateObserver contentUpdateObserver = new ContentUpdateObserver();
+	private ContentUpdateObservable updateObservable = new ContentUpdateObservable(
+			this);
+
+	private ContentUpdateObserver updateNotifier = new ContentUpdateObserver();
 
 	public List<FileContentProvider> getProviders() {
 		return providers;
@@ -24,14 +29,45 @@ public class CompositeContentProvider implements FileContentProvider {
 
 	@Override
 	public LineRecord readLine() throws IOException, InterruptedException {
-		// TODO Auto-generated method stub
-		return null;
+		BlockingQueue<LineRecord> container = new ArrayBlockingQueue<LineRecord>(
+				1);
+		while (true) {
+			FileContentProvider updated = updateNotifier.take();
+			int len = updated.readLines(container, 1);
+			if (len == 1) {
+				return container.poll();
+			} else if (len == -1) {
+				// TODO EOF of file
+			}
+		}
 	}
 
 	@Override
 	public LineRecord readLine(long timeout, TimeUnit unit) throws IOException,
 			InterruptedException, EOFException {
-		// TODO Auto-generated method stub
+		long startNanoTime = System.nanoTime();
+		long totalNanoTimeout = unit.toNanos(timeout);
+		long nanoTimeout = totalNanoTimeout;
+		BlockingQueue<LineRecord> container = new ArrayBlockingQueue<LineRecord>(
+				1);
+		while (nanoTimeout > 0) {
+			FileContentProvider updated = updateNotifier.poll(nanoTimeout,
+					TimeUnit.NANOSECONDS);
+			nanoTimeout = totalNanoTimeout
+					- (System.nanoTime() - startNanoTime);
+			if (nanoTimeout <= 0 || updated == null) {
+				break;
+			}
+			int len = updated.readLines(container, 1);
+			if (len == 1) {
+				return container.poll();
+			} else if (len == -1) {
+				// TODO EOF of file
+			}
+			nanoTimeout = totalNanoTimeout
+					- (System.nanoTime() - startNanoTime);
+		}
+		// timeout
 		return null;
 	}
 
@@ -39,11 +75,15 @@ public class CompositeContentProvider implements FileContentProvider {
 	public int readLines(Queue<LineRecord> list, int maxSize)
 			throws IOException {
 		int totalLen = 0;
-		for (FileContentProvider provider : providers) {
-			int len = provider.readLines(list, maxSize);
-			if (len != -1) {
-				maxSize -= len;
+		FileContentProvider updated;
+		while (maxSize > 0 && (updated = updateNotifier.poll()) != null) {
+			// reset version
+			int len = updated.readLines(list, maxSize);
+			if (len == -1) {
+				// TODO EOF of file
+			} else {
 				totalLen += len;
+				maxSize -= len;
 			}
 		}
 		return totalLen;
@@ -52,7 +92,7 @@ public class CompositeContentProvider implements FileContentProvider {
 	@Override
 	public void init() throws IOException {
 		for (FileContentProvider provider : providers) {
-			provider.addUpdateObserver(contentUpdateObserver);
+			provider.addUpdateObserver(updateNotifier);
 			provider.init();
 		}
 	}
@@ -60,7 +100,7 @@ public class CompositeContentProvider implements FileContentProvider {
 	@Override
 	public void close() throws IOException {
 		for (FileContentProvider provider : providers) {
-			provider.removeUpdateObserver(contentUpdateObserver);
+			provider.removeUpdateObserver(updateNotifier);
 			provider.close();
 		}
 	}
@@ -73,14 +113,12 @@ public class CompositeContentProvider implements FileContentProvider {
 
 	@Override
 	public void addUpdateObserver(Observer observer) {
-		// TODO Auto-generated method stub
-
+		updateObservable.addObserver(observer);
 	}
 
 	@Override
 	public void removeUpdateObserver(Observer observer) {
-		// TODO Auto-generated method stub
-
+		updateObservable.deleteObserver(observer);
 	}
 
 }
