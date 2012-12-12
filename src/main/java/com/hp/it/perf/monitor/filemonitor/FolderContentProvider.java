@@ -20,10 +20,9 @@ public class FolderContentProvider implements FileContentProvider {
 
 	private FileFilter filter;
 
-	private ContentUpdateObserver<UniqueFile> contentUpdateObserver = new ContentUpdateObserver<UniqueFile>(
-			UniqueFile.class);
+	private ContentUpdateObserver updateNotifier = new ContentUpdateObserver();
 
-	private ContentUpdateObservable<FolderContentProvider> contentUpdateObservable = new ContentUpdateObservable<FolderContentProvider>(
+	private ContentUpdateObservable contentUpdateObservable = new ContentUpdateObservable(
 			this);
 
 	private Map<Object, UniqueFile> files = new HashMap<Object, UniqueFile>();
@@ -51,7 +50,7 @@ public class FolderContentProvider implements FileContentProvider {
 		BlockingQueue<LineRecord> container = new ArrayBlockingQueue<LineRecord>(
 				1);
 		while (true) {
-			UniqueFile updated = contentUpdateObserver.take();
+			UniqueFile updated = (UniqueFile) updateNotifier.take();
 			int len = updated.readLines(container, 1);
 			if (len == 1) {
 				return container.poll();
@@ -70,7 +69,7 @@ public class FolderContentProvider implements FileContentProvider {
 		BlockingQueue<LineRecord> container = new ArrayBlockingQueue<LineRecord>(
 				1);
 		while (nanoTimeout > 0) {
-			UniqueFile updated = contentUpdateObserver.poll(nanoTimeout,
+			UniqueFile updated = (UniqueFile) updateNotifier.poll(nanoTimeout,
 					TimeUnit.NANOSECONDS);
 			nanoTimeout = totalNanoTimeout
 					- (System.nanoTime() - startNanoTime);
@@ -95,7 +94,8 @@ public class FolderContentProvider implements FileContentProvider {
 			throws IOException {
 		int totalLen = 0;
 		UniqueFile updated;
-		while (maxSize > 0 && (updated = contentUpdateObserver.poll()) != null) {
+		while (maxSize > 0
+				&& (updated = (UniqueFile) updateNotifier.poll()) != null) {
 			// reset version
 			int len = updated.readLines(list, maxSize);
 			if (len == -1) {
@@ -126,6 +126,7 @@ public class FolderContentProvider implements FileContentProvider {
 				notifyFolderChange(event);
 			}
 		});
+		contentUpdateObservable.addObserver(updateNotifier);
 		folderChangeKey.addMonitorListener(contentUpdateObservable);
 		for (File f : folder.listFiles(filter)) {
 			UniqueFile uniqueFile = new UniqueFile();
@@ -177,13 +178,14 @@ public class FolderContentProvider implements FileContentProvider {
 			Object fileKey = event.getChangedFileKey();
 			UniqueFile f = files.get(fileKey);
 			if (f != null) {
-				contentUpdateObserver.update(o, arg);
+				contentUpdateObservable.onChanged(event);
 			}
 		}
 	}
 
 	@Override
 	public void close() throws IOException {
+		contentUpdateObservable.deleteObserver(updateNotifier);
 		for (UniqueFile f : files.values()) {
 			f.close();
 		}
@@ -202,13 +204,12 @@ public class FolderContentProvider implements FileContentProvider {
 
 	@Override
 	public void addUpdateObserver(Observer observer) {
-		contentUpdateObserver.
+		contentUpdateObservable.addObserver(observer);
 	}
 
 	@Override
 	public void removeUpdateObserver(Observer observer) {
-		// TODO Auto-generated method stub
-
+		contentUpdateObservable.deleteObserver(observer);
 	}
 
 	// @Override

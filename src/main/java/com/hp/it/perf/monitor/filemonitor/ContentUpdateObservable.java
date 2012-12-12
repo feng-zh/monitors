@@ -3,21 +3,25 @@ package com.hp.it.perf.monitor.filemonitor;
 import java.util.Observable;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class ContentUpdateObservable<T extends FileContentProvider> extends
-		Observable implements FileMonitorListener {
+public class ContentUpdateObservable extends Observable implements
+		FileMonitorListener {
 
-	private final T provider;
+	private final FileContentProvider provider;
 
 	private static AtomicInteger sequence = new AtomicInteger();
 
+	private final ContentUpdateChecker updateChecker;
+
 	private int index;
 
-	public ContentUpdateObservable(T provider) {
+	public ContentUpdateObservable(FileContentProvider provider) {
 		this.provider = provider;
 		this.index = sequence.incrementAndGet();
+		this.updateChecker = new ContentUpdateChecker(this);
+		addObserver(updateChecker);
 	}
 
-	public T getProvider() {
+	public FileContentProvider getProvider() {
 		return provider;
 	}
 
@@ -28,6 +32,10 @@ public class ContentUpdateObservable<T extends FileContentProvider> extends
 
 	int getIndex() {
 		return index;
+	}
+
+	public ContentUpdateChecker getUpdateChecker() {
+		return updateChecker;
 	}
 
 }

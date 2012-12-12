@@ -26,6 +26,8 @@ public class UniqueFile implements FileContentProvider {
 
 	private ContentUpdateObservable updater = new ContentUpdateObservable(this);
 
+	private ContentUpdateChecker checker = updater.getUpdateChecker();
+
 	public File getFile() {
 		return file;
 	}
@@ -45,7 +47,7 @@ public class UniqueFile implements FileContentProvider {
 	@Override
 	public LineRecord readLine() throws IOException, InterruptedException {
 		while (true) {
-			long tickCount = changeKey == null ? 0 : changeKey.getTickCount();
+			long tickCount = checker.getLastTickCount();
 			byte[] line = reader.readLine();
 			if (line == null) {
 				// no change after read
@@ -56,7 +58,7 @@ public class UniqueFile implements FileContentProvider {
 				} else {
 					// real-time monitor
 					// wait new change
-					changeKey.await(tickCount);
+					checker.await(tickCount);
 				}
 			} else {
 				return wrapRecord(line, reader.getLineNumber());
@@ -78,7 +80,7 @@ public class UniqueFile implements FileContentProvider {
 		long totalNanoTimeout = unit.toNanos(timeout);
 		long nanoTimeout = totalNanoTimeout;
 		while (nanoTimeout > 0) {
-			long tickCount = changeKey == null ? 0 : changeKey.getTickCount();
+			long tickCount = checker.getLastTickCount();
 			// TODO consider no time elapsed here, as well as no sync here
 			byte[] line = reader.readLine();
 			if (line == null) {
@@ -93,7 +95,7 @@ public class UniqueFile implements FileContentProvider {
 					nanoTimeout = totalNanoTimeout
 							- (System.nanoTime() - startNanoTime);
 					if (nanoTimeout > 0
-							&& !changeKey.await(tickCount, nanoTimeout,
+							&& !checker.await(tickCount, nanoTimeout,
 									TimeUnit.NANOSECONDS)) {
 						// got change notify
 						// re-calculate timeout
@@ -187,7 +189,7 @@ public class UniqueFile implements FileContentProvider {
 			changeKey = monitorService.register(file, FileMonitorMode.CHANGE);
 			changeKey.addMonitorListener(updater);
 		} else {
-			// TODO mock update event if no monitor service
+			// FIXME mock update event if no monitor service
 		}
 	}
 

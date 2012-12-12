@@ -7,35 +7,29 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-public class ContentUpdateObserver<T extends FileContentProvider> implements
-		Observer {
+public class ContentUpdateObserver implements Observer {
 
 	private BlockingQueue<Integer> updatedQueue = new LinkedBlockingQueue<Integer>();
 
-	private ConcurrentHashMap<Integer, T> checker = new ConcurrentHashMap<Integer, T>();
-
-	private Class<T> providerClass;
-
-	public ContentUpdateObserver(Class<T> providerClass) {
-		this.providerClass = providerClass;
-	}
-
+	private ConcurrentHashMap<Integer, FileContentProvider> checker = new ConcurrentHashMap<Integer, FileContentProvider>();
+	
 	@Override
 	public void update(Observable o, Object arg) {
-		ContentUpdateObservable<?> updater = (ContentUpdateObservable<?>) o;
-		T provider = providerClass.cast(updater.getProvider());
+		ContentUpdateObservable updater = (ContentUpdateObservable) o;
+		FileContentProvider provider = updater.getProvider();
 		long tickCount = (Long) arg;
 		if (checker.putIfAbsent(updater.getIndex(), provider) == null) {
 			updatedQueue.offer(updater.getIndex());
 		}
 	}
 
-	public T take() throws InterruptedException {
+	public FileContentProvider take() throws InterruptedException {
 		Integer providerIndex = updatedQueue.take();
 		return checker.remove(providerIndex);
 	}
 
-	public T poll(long timeout, TimeUnit unit) throws InterruptedException {
+	public FileContentProvider poll(long timeout, TimeUnit unit)
+			throws InterruptedException {
 		Integer providerIndex = updatedQueue.poll(timeout, unit);
 		if (providerIndex == null) {
 			return null;
@@ -44,7 +38,7 @@ public class ContentUpdateObserver<T extends FileContentProvider> implements
 		}
 	}
 
-	public T poll() {
+	public FileContentProvider poll() {
 		Integer providerIndex = updatedQueue.poll();
 		if (providerIndex == null) {
 			return null;
