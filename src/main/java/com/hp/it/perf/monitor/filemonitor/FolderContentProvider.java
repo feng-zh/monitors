@@ -28,7 +28,7 @@ public class FolderContentProvider implements FileContentProvider {
 	private Map<Object, UniqueFile> files = new HashMap<Object, UniqueFile>();
 
 	private FileMonitorService monitorService;
-	
+
 	public File getFolder() {
 		return folder;
 	}
@@ -115,14 +115,55 @@ public class FolderContentProvider implements FileContentProvider {
 		if (!files.isEmpty()) {
 			throw new IllegalStateException("init() call called");
 		}
-		FileMonitorKey folderChangeKey = monitorService.register(folder,
-				FileMonitorMode.ENTRY_CREATE, FileMonitorMode.ENTRY_CHANGE,
-				FileMonitorMode.ENTRY_REMOVE);
+		FileMonitorKey folderCreateKey = monitorService.folderRegister(folder,
+				FileMonitorMode.CREATE);
+		folderCreateKey.addMonitorListener(new FileMonitorListener() {
+
+			@Override
+			public void onChanged(FileMonitorEvent event) {
+				UniqueFile uniqueFile = new UniqueFile();
+				uniqueFile.setFile(event.getChangedFile());
+				uniqueFile.setMonitorService(monitorService);
+				try {
+					uniqueFile.init();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					try {
+						uniqueFile.close();
+					} catch (IOException ignored) {
+					}
+				}
+				files.put(uniqueFile.getUniqueKey(), uniqueFile);
+			}
+		});
+		FileMonitorKey folderChangeKey = monitorService.folderRegister(folder,
+				FileMonitorMode.CHANGE);
 		folderChangeKey.addMonitorListener(new FileMonitorListener() {
 
 			@Override
 			public void onChanged(FileMonitorEvent event) {
-				notifyFolderChange(event);
+				Object fileKey = event.getChangedFileKey();
+				UniqueFile f = files.get(fileKey);
+				if (f != null) {
+					contentUpdateObservable.onChanged(event);
+				}
+			}
+		});
+		FileMonitorKey folderRemoveKey = monitorService.folderRegister(folder,
+				FileMonitorMode.REMOVE);
+		folderRemoveKey.addMonitorListener(new FileMonitorListener() {
+
+			@Override
+			public void onChanged(FileMonitorEvent event) {
+				for (int i = 0; i < files.size(); i++) {
+					UniqueFile f = files.get(i);
+					if (FileMonitors.isSameFileKey(f.getUniqueKey(),
+							event.getChangedFileKey())) {
+						files.remove(i);
+						break;
+					}
+				}
 			}
 		});
 		contentUpdateObservable.addObserver(updateNotifier);
@@ -144,41 +185,6 @@ public class FolderContentProvider implements FileContentProvider {
 				}
 			}
 			files.put(uniqueFile.getUniqueKey(), uniqueFile);
-		}
-	}
-
-	protected void notifyFolderChange(FileMonitorEvent event) {
-		// if new file created
-		if (event.getMode() == FileMonitorMode.ENTRY_CREATE) {
-			UniqueFile uniqueFile = new UniqueFile();
-			uniqueFile.setFile(event.getChangedFile());
-			uniqueFile.setMonitorService(monitorService);
-			try {
-				uniqueFile.init();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				try {
-					uniqueFile.close();
-				} catch (IOException ignored) {
-				}
-			}
-			files.put(uniqueFile.getUniqueKey(), uniqueFile);
-		} else if (event.getMode() == FileMonitorMode.ENTRY_REMOVE) {
-			for (int i = 0; i < files.size(); i++) {
-				UniqueFile f = files.get(i);
-				if (FileMonitors.isSameFileKey(f.getUniqueKey(),
-						event.getChangedFileKey())) {
-					files.remove(i);
-					break;
-				}
-			}
-		} else if (event.getMode() == FileMonitorMode.ENTRY_CHANGE) {
-			Object fileKey = event.getChangedFileKey();
-			UniqueFile f = files.get(fileKey);
-			if (f != null) {
-				contentUpdateObservable.onChanged(event);
-			}
 		}
 	}
 

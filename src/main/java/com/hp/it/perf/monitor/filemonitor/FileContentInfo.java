@@ -8,6 +8,7 @@ public class FileContentInfo implements Serializable {
 
 	private String fileName;
 
+	// TODO consider performance impact
 	private long lastModified;
 
 	private long length;
