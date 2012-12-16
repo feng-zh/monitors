@@ -9,8 +9,6 @@ public interface FileMonitorKey extends Closeable {
 
 	long getLastUpdated();
 
-	long getLength();
-
 	File getCurrentFile();
 
 	void addMonitorListener(FileMonitorListener fileMonitorListener);

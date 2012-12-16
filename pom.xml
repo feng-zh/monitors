@@ -18,4 +18,25 @@
 			</plugin>
 		</plugins>
 	</build>
+	<dependencies>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.6.6</version>
+		</dependency>
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>1.0.6</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>jpathwatch</groupId>
+			<artifactId>jpathwatch</artifactId>
+			<version>0.95</version>
+			<scope>system</scope>
+			<systemPath>${basedir}/src/lib/jpathwatch-0-95.jar</systemPath>
+			<optional>true</optional>
+		</dependency>
+	</dependencies>
 </project>

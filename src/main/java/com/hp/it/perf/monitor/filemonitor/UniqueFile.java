@@ -9,24 +9,37 @@ import java.util.Observer;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 // This is not thread safe
 // Provider for one file with same i-node (file key)
 // low level provider for file created
 public class UniqueFile implements FileContentProvider {
 
+	private static final Logger log = LoggerFactory.getLogger(UniqueFile.class);
+
 	private File file;
 
-	private RandomAccessFileReader reader;
+	private long initOffset;
 
-	private Object fileKey;
+	private String originalPath;
+
+	private String currentPath;
+
+	private FileKey fileKey;
+
+	private RandomAccessFileReader reader;
 
 	private FileMonitorService monitorService;
 
 	private FileMonitorKey changeKey;
 
+	private FileMonitorKey deleteKey;
+
 	private ContentUpdateObservable updater = new ContentUpdateObservable(this);
 
-	private ContentUpdateChecker checker = updater.getUpdateChecker();
+	private long providerId = providerIdSeed.incrementAndGet();
 
 	public File getFile() {
 		return file;
@@ -34,6 +47,14 @@ public class UniqueFile implements FileContentProvider {
 
 	public void setFile(File file) {
 		this.file = file;
+	}
+
+	public long getInitOffset() {
+		return initOffset;
+	}
+
+	public void setInitOffset(long initOffset) {
+		this.initOffset = initOffset;
 	}
 
 	public FileMonitorService getMonitorService() {
@@ -46,19 +67,23 @@ public class UniqueFile implements FileContentProvider {
 
 	@Override
 	public LineRecord readLine() throws IOException, InterruptedException {
+		ContentUpdateChecker checker = updater.getUpdateChecker();
 		while (true) {
 			long tickCount = checker.getLastTickCount();
 			byte[] line = reader.readLine();
 			if (line == null) {
+				log.trace("no line read for file {} with tick '{}'", file,
+						tickCount);
 				// no change after read
 				if (changeKey == null) {
-					// not real-time monitor
+					// not real-time monitor, or deleted
 					// return null as EOF
 					return null;
 				} else {
 					// real-time monitor
 					// wait new change
 					checker.await(tickCount);
+					log.trace("notify by new change for file {}", file);
 				}
 			} else {
 				return wrapRecord(line, reader.getLineNumber());
@@ -70,12 +95,14 @@ public class UniqueFile implements FileContentProvider {
 		LineRecord record = new LineRecord();
 		record.setLineNum(lineNumber);
 		record.setLine(line);
+		record.setProviderId(providerId);
 		return record;
 	}
 
 	@Override
 	public LineRecord readLine(long timeout, TimeUnit unit) throws IOException,
 			InterruptedException, EOFException {
+		ContentUpdateChecker checker = updater.getUpdateChecker();
 		long startNanoTime = System.nanoTime();
 		long totalNanoTimeout = unit.toNanos(timeout);
 		long nanoTimeout = totalNanoTimeout;
@@ -142,36 +169,53 @@ public class UniqueFile implements FileContentProvider {
 	}
 
 	@Override
-	public void close() throws IOException {
-		reader.close();
+	public synchronized void close() throws IOException {
+		if (reader != null) {
+			reader.close();
+			reader = null;
+			log.trace("close reader for file {}", file);
+		}
+		closeDeleteKey();
+		closeChangeKey();
+	}
+
+	private void closeDeleteKey() {
+		if (deleteKey != null) {
+			deleteKey.removeMonitorListener(updater);
+			deleteKey.close();
+			deleteKey = null;
+			log.trace("unregister delete monitor key for file {}", file);
+		}
+	}
+
+	private void closeChangeKey() {
 		if (changeKey != null) {
 			changeKey.removeMonitorListener(updater);
 			changeKey.close();
+			changeKey = null;
+			log.trace("unregister change monitor key for file {}", file);
 		}
 	}
 
 	@Override
-	public List<FileContentInfo> getFileContentInfos() throws IOException {
+	public List<FileContentInfo> getFileContentInfos(boolean realtime)
+			throws IOException {
 		FileContentInfo info = new FileContentInfo();
 		info.setFileKey(fileKey);
-		if (changeKey != null) {
-			info.setFileName(changeKey.getCurrentFile().getAbsolutePath());
-			info.setLastModified(changeKey.getLastUpdated());
-			info.setLength(changeKey.getLength());
-		} else {
-			File currentFile = FileMonitors.getFileByKey(file, fileKey);
-			if (currentFile == null) {
-				info.setFileName(file.getAbsolutePath());
-				info.setLastModified(-1);
-				// removed
-				info.setLength(-1);
-			} else {
-				info.setFileName(currentFile.getAbsolutePath());
+		info.setFileName(originalPath);
+		info.setCurrentFileName(currentPath);
+		info.setProviderId(providerId);
+		info.setOffset(reader.position());
+		if (realtime) {
+			if (currentPath != null) {
+				File currentFile = new File(currentPath);
 				info.setLastModified(currentFile.lastModified());
 				info.setLength(currentFile.length());
+			} else {
+				info.setLastModified(0L);
+				info.setLength(-1);
 			}
 		}
-		info.setOffset(reader.position());
 		return Collections.singletonList(info);
 	}
 
@@ -183,17 +227,40 @@ public class UniqueFile implements FileContentProvider {
 		if (reader != null) {
 			throw new IllegalStateException("init() call called");
 		}
-		reader = new RandomAccessFileReader(file);
+		reader = new RandomAccessFileReader(file, initOffset);
+		log.trace("create random access file reader for file {}", file);
 		fileKey = FileMonitors.getKeyByFile(file);
+		originalPath = file.getAbsolutePath();
+		currentPath = originalPath;
 		if (monitorService != null) {
-			changeKey = monitorService.singleRegister(file, FileMonitorMode.CHANGE);
+			changeKey = monitorService.singleRegister(file,
+					FileMonitorMode.MODIFY);
 			changeKey.addMonitorListener(updater);
-		} else {
-			// FIXME mock update event if no monitor service
+			changeKey.addMonitorListener(new FileMonitorListener() {
+
+				@Override
+				public void onChanged(FileMonitorEvent event) {
+					currentPath = event.getChangedFile().getAbsolutePath();
+				}
+			});
+			log.trace("register change monitor key for file {}", file);
+			deleteKey = monitorService.singleRegister(file,
+					FileMonitorMode.DELETE);
+			deleteKey.addMonitorListener(new FileMonitorListener() {
+
+				@Override
+				public void onChanged(FileMonitorEvent event) {
+					// file is deleted from current folder
+					currentPath = null;
+					closeChangeKey();
+					updater.getUpdateChecker().update(updater,
+							ContentUpdateChecker.InvalidTick);
+				}
+			});
 		}
 	}
 
-	Object getUniqueKey() {
+	FileKey getUniqueKey() {
 		return fileKey;
 	}
 
@@ -206,10 +273,5 @@ public class UniqueFile implements FileContentProvider {
 	public void removeUpdateObserver(Observer observer) {
 		updater.deleteObserver(observer);
 	}
-
-	// @Override
-	// public long skip(long bytes) throws IOException {
-	// return reader.skip(bytes);
-	// }
 
 }

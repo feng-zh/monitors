@@ -2,14 +2,11 @@ package com.hp.it.perf.monitor.filemonitor;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Arrays;
 
 public class RandomAccessFileReader implements Closeable {
-
-	private File file;
 
 	private RandomAccessFile access;
 
@@ -20,6 +17,8 @@ public class RandomAccessFileReader implements Closeable {
 	private int lineBufOffset = 0;
 
 	private byte[] readBuf = new byte[1024];
+
+	private long position;
 
 	private static class BytesBuffer {
 
@@ -48,21 +47,26 @@ public class RandomAccessFileReader implements Closeable {
 		public BytesBuffer append(byte[] data, int offset, int len) {
 			if (len > 0) {
 				int newLen = count + len;
-				if (newLen - value.length > 0) {
-					int newCapacity = value.length * 2 + 2;
-					if (newCapacity - newLen < 0)
-						newCapacity = newLen;
-					if (newCapacity < 0) {
-						if (newLen < 0) // overflow
-							throw new OutOfMemoryError();
-						newCapacity = Integer.MAX_VALUE;
-					}
-					value = Arrays.copyOf(value, newCapacity);
-				}
+				ensureCapacityInternal(newLen);
 			}
 			System.arraycopy(data, offset, value, count, len);
 			count += len;
 			return this;
+		}
+
+		private void ensureCapacityInternal(int newLen) {
+			// overflow-conscious code
+			if (newLen - value.length > 0) {
+				int newCapacity = value.length * 2 + 2;
+				if (newCapacity - newLen < 0)
+					newCapacity = newLen;
+				if (newCapacity < 0) {
+					if (newLen < 0) // overflow
+						throw new OutOfMemoryError();
+					newCapacity = Integer.MAX_VALUE;
+				}
+				value = Arrays.copyOf(value, newCapacity);
+			}
 		}
 
 		public BytesBuffer delete(int start, int end) {
@@ -94,11 +98,33 @@ public class RandomAccessFileReader implements Closeable {
 			System.arraycopy(value, fromIndex, data, offset, endIndex
 					- fromIndex);
 		}
+
+		public BytesBuffer insert(int offset, byte[] data) {
+			if ((offset < 0) || (offset > length()))
+				throw new StringIndexOutOfBoundsException(offset);
+			int len = data.length;
+			ensureCapacityInternal(count + len);
+			System.arraycopy(value, offset, value, offset + len, count - offset);
+			System.arraycopy(data, 0, value, offset, len);
+			count += len;
+			return this;
+		}
 	}
 
-	public RandomAccessFileReader(File file) throws FileNotFoundException {
-		this.file = file;
+	public RandomAccessFileReader(File file, long initOffset)
+			throws IOException {
 		this.access = new RandomAccessFile(file.getAbsoluteFile(), "r");
+		if (initOffset < 0) {
+			// move to end
+			initOffset = Long.MAX_VALUE;
+		}
+		initOffset = Math.min(initOffset, access.length());
+		if (initOffset > 0) {
+			access.seek(initOffset);
+			this.position = initOffset;
+		} else {
+			this.position = 0;
+		}
 	}
 
 	@Override
@@ -136,6 +162,7 @@ public class RandomAccessFileReader implements Closeable {
 			lineBuf.delete(0, lineBufOffset);
 			lineBufOffset = 0;
 		}
+		position += buf.length;
 		return buf;
 	}
 
@@ -154,22 +181,11 @@ public class RandomAccessFileReader implements Closeable {
 	}
 
 	public void pushBackLine(byte[] line) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public long available() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	public long skip(long len) {
-		// TODO Auto-generated method stub
-		return 0;
+		lineBuf.insert(0, line);
+		position -= line.length;
 	}
 
 	public long position() {
-		// TODO Auto-generated method stub
-		return 0;
+		return position;
 	}
 }

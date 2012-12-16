@@ -9,7 +9,9 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class ContentUpdateChecker implements Observer {
 
-	private volatile long lastTickCount;
+	private volatile long lastTickCount = 0;
+
+	public static final long InvalidTick = -1;
 
 	private final ContentUpdateObservable observable;
 
@@ -40,7 +42,7 @@ public class ContentUpdateChecker implements Observer {
 	public void await(long tickCount) throws InterruptedException {
 		lock.lock();
 		try {
-			while (lastTickCount <= tickCount) {
+			while (lastTickCount != InvalidTick && lastTickCount <= tickCount) {
 				sync.await();
 			}
 		} finally {
@@ -53,7 +55,7 @@ public class ContentUpdateChecker implements Observer {
 		long nanosTimeout = unit.toNanos(timeout);
 		lock.lock();
 		try {
-			while (lastTickCount <= tickCount) {
+			while (lastTickCount != InvalidTick && lastTickCount <= tickCount) {
 				if (nanosTimeout <= 0L)
 					return false;
 				nanosTimeout = sync.awaitNanos(nanosTimeout);

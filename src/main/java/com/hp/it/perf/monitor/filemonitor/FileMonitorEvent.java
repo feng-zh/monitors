@@ -13,10 +13,19 @@ public class FileMonitorEvent extends EventObject {
 
 	private File changedFile;
 
-	private Object changedFileKey;
+	private FileKey changedFileKey;
 
-	public FileMonitorEvent(FileMonitorKey source) {
+	private FileMonitorKey monitorKey;
+
+	private final long tickNumber;
+
+	public FileMonitorEvent(Object source, long tickNumber) {
 		super(source);
+		this.tickNumber = tickNumber;
+	}
+
+	public void setMonitorKey(FileMonitorKey monitorKey) {
+		this.monitorKey = monitorKey;
 	}
 
 	// may null (deleted)
@@ -34,32 +43,31 @@ public class FileMonitorEvent extends EventObject {
 	}
 
 	public FileMonitorKey getMonitorKey() {
-		return (FileMonitorKey) source;
+		return monitorKey;
 	}
 
-	protected void setChangedFile(File changedFile) {
+	public void setChangedFile(File changedFile) {
 		this.changedFile = changedFile;
 	}
 
-	protected void setMonitorFile(File monitorFile) {
+	public void setMonitorFile(File monitorFile) {
 		this.monitorFile = monitorFile;
 	}
 
-	protected void setMode(FileMonitorMode monitorMode) {
+	public void setMode(FileMonitorMode monitorMode) {
 		this.monitorMode = monitorMode;
 	}
 
-	public Object getChangedFileKey() {
+	public FileKey getChangedFileKey() {
 		return changedFileKey;
 	}
 
-	protected void setChangedFileKey(Object changedFileKey) {
+	public void setChangedFileKey(FileKey changedFileKey) {
 		this.changedFileKey = changedFileKey;
 	}
 
-	public long getTickCount() {
-		// TODO Auto-generated method stub
-		return System.currentTimeMillis();
+	public long getTickNumber() {
+		return tickNumber;
 	}
 
 }

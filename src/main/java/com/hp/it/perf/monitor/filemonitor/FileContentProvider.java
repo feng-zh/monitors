@@ -7,8 +7,11 @@ import java.util.List;
 import java.util.Observer;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 public interface FileContentProvider extends Closeable {
+
+	public final static AtomicLong providerIdSeed = new AtomicLong();
 
 	// wait operation
 	public LineRecord readLine() throws IOException, InterruptedException;
@@ -21,16 +24,19 @@ public interface FileContentProvider extends Closeable {
 	public int readLines(Queue<LineRecord> list, int maxSize)
 			throws IOException;
 
+	// life-cycle
 	public void init() throws IOException;
 
 	public void close() throws IOException;
 
-	public List<FileContentInfo> getFileContentInfos() throws IOException;
-
+	// change listener
 	public void addUpdateObserver(Observer observer);
 
 	public void removeUpdateObserver(Observer observer);
 
-	// // may not supported
-	// public long skip(long bytes) throws IOException;
+	// information
+	// include providerId, original name, last event, current name, file key
+	public List<FileContentInfo> getFileContentInfos(boolean realtime)
+			throws IOException;
+
 }

@@ -12,12 +12,11 @@ public class ContentUpdateObserver implements Observer {
 	private BlockingQueue<Integer> updatedQueue = new LinkedBlockingQueue<Integer>();
 
 	private ConcurrentHashMap<Integer, FileContentProvider> checker = new ConcurrentHashMap<Integer, FileContentProvider>();
-	
+
 	@Override
 	public void update(Observable o, Object arg) {
 		ContentUpdateObservable updater = (ContentUpdateObservable) o;
 		FileContentProvider provider = updater.getProvider();
-		long tickCount = (Long) arg;
 		if (checker.putIfAbsent(updater.getIndex(), provider) == null) {
 			updatedQueue.offer(updater.getIndex());
 		}

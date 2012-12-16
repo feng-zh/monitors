@@ -28,7 +28,7 @@ public class ContentUpdateObservable extends Observable implements
 	@Override
 	public void onChanged(FileMonitorEvent event) {
 		setChanged();
-		notifyObservers(event.getTickCount());
+		notifyObservers(event.getTickNumber());
 	}
 
 	int getIndex() {

@@ -4,9 +4,13 @@ import java.io.Serializable;
 
 public class LineRecord implements Serializable {
 
+	private static final long serialVersionUID = 1L;
+
 	private byte[] line;
 
 	private int lineNum;
+
+	private long providerId;
 
 	public byte[] getLine() {
 		return line;
@@ -24,6 +28,12 @@ public class LineRecord implements Serializable {
 		this.lineNum = lineNum;
 	}
 
-	// private long provideId;
+	public long getProviderId() {
+		return providerId;
+	}
+
+	public void setProviderId(long providerId) {
+		this.providerId = providerId;
+	}
 
 }

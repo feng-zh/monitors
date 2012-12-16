@@ -6,6 +6,7 @@ import java.io.FileFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Observer;
@@ -13,6 +14,9 @@ import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FolderContentProvider implements FileContentProvider {
 
@@ -25,9 +29,16 @@ public class FolderContentProvider implements FileContentProvider {
 	private ContentUpdateObservable contentUpdateObservable = new ContentUpdateObservable(
 			this);
 
-	private Map<Object, UniqueFile> files = new HashMap<Object, UniqueFile>();
+	private Map<FileKey, UniqueFile> files = new HashMap<FileKey, UniqueFile>();
+
+	private Queue<FileContentProvider> lastUpdates = new LinkedList<FileContentProvider>();
 
 	private FileMonitorService monitorService;
+
+	private boolean tailMode;
+
+	private static final Logger log = LoggerFactory
+			.getLogger(FolderContentProvider.class);
 
 	public File getFolder() {
 		return folder;
@@ -45,17 +56,51 @@ public class FolderContentProvider implements FileContentProvider {
 		this.monitorService = monitorService;
 	}
 
+	public FileFilter getFilter() {
+		return filter;
+	}
+
+	public void setFilter(FileFilter filter) {
+		this.filter = filter;
+	}
+
+	public boolean isTailMode() {
+		return tailMode;
+	}
+
+	public void setTailMode(boolean tailMode) {
+		this.tailMode = tailMode;
+	}
+
 	@Override
 	public LineRecord readLine() throws IOException, InterruptedException {
 		BlockingQueue<LineRecord> container = new ArrayBlockingQueue<LineRecord>(
 				1);
 		while (true) {
-			FileContentProvider updated = updateNotifier.take();
-			int len = updated.readLines(container, 1);
+			FileContentProvider file = lastUpdates.poll();
+			if (file == null) {
+				log.trace("start take updated file on folder {}", folder);
+				file = updateNotifier.take();
+				if (file == this) {
+					// just notified for check again
+					log.trace("notify by folder change to refetch");
+					continue;
+				}
+				log.trace(
+						"fetch one line for updated file content provider {}",
+						file);
+			}
+			// TODO concurrent issue
+			int len = file.readLines(container, 1);
+			log.trace("read line count {}", len);
 			if (len == 1) {
-				return container.poll();
+				LineRecord line = container.poll();
+				lastUpdates.offer(file);
+				return line;
 			} else if (len == -1) {
 				// TODO EOF of file
+			} else {
+				// no data loaded
 			}
 		}
 	}
@@ -69,18 +114,30 @@ public class FolderContentProvider implements FileContentProvider {
 		BlockingQueue<LineRecord> container = new ArrayBlockingQueue<LineRecord>(
 				1);
 		while (nanoTimeout > 0) {
-			FileContentProvider updated = updateNotifier.poll(nanoTimeout,
-					TimeUnit.NANOSECONDS);
-			nanoTimeout = totalNanoTimeout
-					- (System.nanoTime() - startNanoTime);
-			if (nanoTimeout <= 0 || updated == null) {
-				break;
+			FileContentProvider file = lastUpdates.poll();
+			if (file == null) {
+				file = updateNotifier.poll(nanoTimeout, TimeUnit.NANOSECONDS);
+				nanoTimeout = totalNanoTimeout
+						- (System.nanoTime() - startNanoTime);
+				if (nanoTimeout <= 0 || file == null) {
+					break;
+				}
+				if (file == this) {
+					// just notified for check again
+					log.trace("notify by folder change to refetch");
+					continue;
+				}
 			}
-			int len = updated.readLines(container, 1);
+			// TODO concurrent issue
+			int len = file.readLines(container, 1);
 			if (len == 1) {
-				return container.poll();
+				LineRecord line = container.poll();
+				lastUpdates.offer(file);
+				return line;
 			} else if (len == -1) {
 				// TODO EOF of file
+			} else {
+				// no data loaded
 			}
 			nanoTimeout = totalNanoTimeout
 					- (System.nanoTime() - startNanoTime);
@@ -93,15 +150,36 @@ public class FolderContentProvider implements FileContentProvider {
 	public int readLines(Queue<LineRecord> list, int maxSize)
 			throws IOException {
 		int totalLen = 0;
-		FileContentProvider updated;
-		while (maxSize > 0 && (updated = updateNotifier.poll()) != null) {
+		FileContentProvider file = null;
+		while (maxSize > 0) {
+			if (file == null) {
+				file = lastUpdates.poll();
+			}
+			if (file == null) {
+				file = updateNotifier.poll();
+				if (file == this) {
+					// just notified for check again
+					log.trace("notify by folder change to refetch");
+					continue;
+				}
+			}
+			if (file == null) {
+				break;
+			}
 			// reset version
-			int len = updated.readLines(list, maxSize);
+			// TODO concurrent issue
+			int len = file.readLines(list, maxSize);
 			if (len == -1) {
 				// TODO EOF of file
-			} else {
+			} else if (len > 0) {
 				totalLen += len;
 				maxSize -= len;
+				if (maxSize <= 0) {
+					// still not finished
+					lastUpdates.offer(file);
+				}
+			} else {
+				// no data loaded
 			}
 		}
 		return totalLen;
@@ -115,76 +193,68 @@ public class FolderContentProvider implements FileContentProvider {
 		if (!files.isEmpty()) {
 			throw new IllegalStateException("init() call called");
 		}
+		if (!folder.isDirectory()) {
+			throw new IOException("invalid folder: " + folder);
+		}
 		FileMonitorKey folderCreateKey = monitorService.folderRegister(folder,
 				FileMonitorMode.CREATE);
 		folderCreateKey.addMonitorListener(new FileMonitorListener() {
 
 			@Override
 			public void onChanged(FileMonitorEvent event) {
-				UniqueFile uniqueFile = new UniqueFile();
-				uniqueFile.setFile(event.getChangedFile());
-				uniqueFile.setMonitorService(monitorService);
+				File updatedFile = event.getChangedFile();
 				try {
-					uniqueFile.init();
+					addMonitorFile(updatedFile, 0);
+					log.trace("folder entry is added for file: {} with key {}",
+							updatedFile, event.getChangedFileKey());
+					contentUpdateObservable.onChanged(event);
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
-					try {
-						uniqueFile.close();
-					} catch (IOException ignored) {
-					}
 				}
-				files.put(uniqueFile.getUniqueKey(), uniqueFile);
 			}
+
 		});
+		log.trace("register create monitor key for folder {}", folder);
 		FileMonitorKey folderChangeKey = monitorService.folderRegister(folder,
-				FileMonitorMode.CHANGE);
+				FileMonitorMode.MODIFY);
 		folderChangeKey.addMonitorListener(new FileMonitorListener() {
 
 			@Override
 			public void onChanged(FileMonitorEvent event) {
-				Object fileKey = event.getChangedFileKey();
+				FileKey fileKey = event.getChangedFileKey();
 				UniqueFile f = files.get(fileKey);
+				log.trace("folder is changed by file: {} for key {}", f,
+						fileKey);
 				if (f != null) {
 					contentUpdateObservable.onChanged(event);
 				}
 			}
 		});
+		folderChangeKey.addMonitorListener(contentUpdateObservable);
+		log.trace("register modify monitor key for folder {}", folder);
 		FileMonitorKey folderRemoveKey = monitorService.folderRegister(folder,
-				FileMonitorMode.REMOVE);
+				FileMonitorMode.DELETE);
 		folderRemoveKey.addMonitorListener(new FileMonitorListener() {
 
 			@Override
 			public void onChanged(FileMonitorEvent event) {
-				for (int i = 0; i < files.size(); i++) {
-					UniqueFile f = files.get(i);
-					if (FileMonitors.isSameFileKey(f.getUniqueKey(),
-							event.getChangedFileKey())) {
-						files.remove(i);
-						break;
-					}
+				UniqueFile removedFile = files.remove(event.getChangedFileKey());
+				log.trace("folder entry is deleted for file: {} with key {}",
+						removedFile == null ? null : removedFile.getFile(),
+						event.getChangedFileKey());
+				if (removedFile != null) {
+					contentUpdateObservable.onChanged(event);
 				}
 			}
 		});
 		contentUpdateObservable.addObserver(updateNotifier);
-		folderChangeKey.addMonitorListener(contentUpdateObservable);
+		log.trace("register delete monitor key for folder {}", folder);
 		for (File f : folder.listFiles(filter)) {
-			UniqueFile uniqueFile = new UniqueFile();
-			uniqueFile.setFile(f);
-			uniqueFile.setMonitorService(monitorService);
-			boolean initSuccess = false;
-			try {
-				uniqueFile.init();
-				initSuccess = true;
-			} finally {
-				if (!initSuccess) {
-					try {
-						uniqueFile.close();
-					} catch (IOException ignored) {
-					}
-				}
+			if (!f.isFile()) {
+				continue;
 			}
-			files.put(uniqueFile.getUniqueKey(), uniqueFile);
+			addMonitorFile(f, -1);
 		}
 	}
 
@@ -198,11 +268,12 @@ public class FolderContentProvider implements FileContentProvider {
 	}
 
 	@Override
-	public List<FileContentInfo> getFileContentInfos() throws IOException {
+	public List<FileContentInfo> getFileContentInfos(boolean realtime)
+			throws IOException {
 		List<FileContentInfo> infos = new ArrayList<FileContentInfo>(
 				files.size());
 		for (UniqueFile f : files.values()) {
-			infos.addAll(f.getFileContentInfos());
+			infos.addAll(f.getFileContentInfos(realtime));
 		}
 		return infos;
 	}
@@ -215,6 +286,35 @@ public class FolderContentProvider implements FileContentProvider {
 	@Override
 	public void removeUpdateObserver(Observer observer) {
 		contentUpdateObservable.deleteObserver(observer);
+	}
+
+	private UniqueFile addMonitorFile(File file, long initOffset)
+			throws IOException {
+		UniqueFile uniqueFile = new UniqueFile();
+		uniqueFile.setFile(file);
+		uniqueFile.setMonitorService(monitorService);
+		uniqueFile.addUpdateObserver(updateNotifier);
+		uniqueFile.setInitOffset(initOffset);
+		log.trace("init single file {}", file);
+		boolean initSuccess = false;
+		try {
+			uniqueFile.init();
+			initSuccess = true;
+		} finally {
+			if (!initSuccess) {
+				uniqueFile.removeUpdateObserver(updateNotifier);
+				try {
+					uniqueFile.close();
+				} catch (IOException ignored) {
+				}
+			}
+		}
+		FileKey fileKey = uniqueFile.getUniqueKey();
+		files.put(fileKey, uniqueFile);
+		lastUpdates.offer(uniqueFile);
+		log.debug("single file {} is registered with unique key {}", file,
+				fileKey);
+		return uniqueFile;
 	}
 
 	// @Override

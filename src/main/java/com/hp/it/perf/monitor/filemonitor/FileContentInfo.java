@@ -4,26 +4,22 @@ import java.io.Serializable;
 
 public class FileContentInfo implements Serializable {
 
-	// private String fileContentKey;
+	private static final long serialVersionUID = 1L;
 
 	private String fileName;
 
-	// TODO consider performance impact
-	private long lastModified;
+	private FileKey fileKey;
 
-	private long length;
+	private long providerId;
 
-	private transient Object fileKey;
+	private String currentFileName;
 
 	private long offset;
 
-	// public String getFileContentKey() {
-	// return fileContentKey;
-	// }
-	//
-	// public void setFileContentKey(String fileContentKey) {
-	// this.fileContentKey = fileContentKey;
-	// }
+	// real-time information
+	private long lastModified;
+
+	private long length;
 
 	public String getFileName() {
 		return fileName;
@@ -57,12 +53,28 @@ public class FileContentInfo implements Serializable {
 		this.length = length;
 	}
 
-	public Object getFileKey() {
+	public FileKey getFileKey() {
 		return fileKey;
 	}
 
-	public void setFileKey(Object fileKey) {
+	public void setFileKey(FileKey fileKey) {
 		this.fileKey = fileKey;
+	}
+
+	public long getProviderId() {
+		return providerId;
+	}
+
+	public void setProviderId(long providerId) {
+		this.providerId = providerId;
+	}
+
+	public String getCurrentFileName() {
+		return currentFileName;
+	}
+
+	public void setCurrentFileName(String currentFileName) {
+		this.currentFileName = currentFileName;
 	}
 
 }

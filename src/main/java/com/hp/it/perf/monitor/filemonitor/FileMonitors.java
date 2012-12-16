@@ -5,35 +5,33 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Iterator;
 
 class FileMonitors {
 
-	public static Object getKeyByFile(File file) throws IOException {
+	public static FileKey getKeyByFile(File file) throws IOException {
 		// not follow link
 		BasicFileAttributes attr = Files.readAttributes(file.toPath(),
 				BasicFileAttributes.class);
-		return attr.fileKey();
+		return new FileKey(attr.fileKey());
 	}
 
-	public static File getFileByKey(File refFile, Object fileKey)
+	public static File getFileByKey(File refFile, FileKey fileKey)
 			throws IOException {
 		// quick check if key is for this file
 		try {
-			Object key = getKeyByFile(refFile);
+			FileKey key = getKeyByFile(refFile);
 			if (isSameFileKey(key, fileKey)) {
 				return refFile;
 			}
 		} catch (IOException ignored) {
 			// some error here, fall back to list in dir
 		}
-		Path dir = refFile.toPath().normalize().getParent();
+		Path dir = refFile.toPath().toAbsolutePath().getParent();
 		// TODO heavy operation in remote system?
-		for (Iterator<Path> iterator = dir.iterator(); iterator.hasNext();) {
-			Path path = iterator.next();
+		for (Path path : Files.newDirectoryStream(dir)) {
 			BasicFileAttributes attr = Files.readAttributes(path,
 					BasicFileAttributes.class);
-			if (isSameFileKey(attr.fileKey(), fileKey)) {
+			if (isSameFileKey(new FileKey(attr.fileKey()), fileKey)) {
 				return path.toFile();
 			}
 		}
@@ -41,9 +39,9 @@ class FileMonitors {
 		return null;
 	}
 
-	public static boolean isKeyForFile(Object fileKey, File refFile) {
+	public static boolean isKeyForFile(FileKey fileKey, File refFile) {
 		try {
-			Object key = getKeyByFile(refFile);
+			FileKey key = getKeyByFile(refFile);
 			if (isSameFileKey(key, fileKey)) {
 				return true;
 			}
@@ -53,7 +51,7 @@ class FileMonitors {
 		return false;
 	}
 
-	public static boolean isSameFileKey(Object key1, Object key2) {
+	private static boolean isSameFileKey(FileKey key1, FileKey key2) {
 		return (key1 != null && key1.equals(key2));
 	}
 }
