@@ -1,24 +1,21 @@
 package com.hp.it.perf.monitor.filemonitor;
 
 import java.util.Observable;
+import java.util.Observer;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ContentUpdateObservable extends Observable implements
-		FileMonitorListener {
+		FileMonitorListener, Observer {
 
 	private final FileContentProvider provider;
 
 	private static AtomicInteger sequence = new AtomicInteger();
-
-	private final ContentUpdateChecker updateChecker;
 
 	private int index;
 
 	public ContentUpdateObservable(FileContentProvider provider) {
 		this.provider = provider;
 		this.index = sequence.incrementAndGet();
-		this.updateChecker = new ContentUpdateChecker(this);
-		addObserver(updateChecker);
 	}
 
 	public FileContentProvider getProvider() {
@@ -35,8 +32,13 @@ public class ContentUpdateObservable extends Observable implements
 		return index;
 	}
 
-	public ContentUpdateChecker getUpdateChecker() {
-		return updateChecker;
+	@Override
+	public void update(Observable o, Object arg) {
+		if (o == this) {
+			throw new IllegalStateException("cycle observer dectected: " + o);
+		}
+		setChanged();
+		notifyObservers(arg);
 	}
 
 }

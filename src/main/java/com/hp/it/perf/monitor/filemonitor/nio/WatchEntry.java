@@ -287,9 +287,9 @@ class WatchEntry {
 				.getMonitorFileKey());
 		if (keyList != null) {
 			keyList.remove(monitorKey);
-		}
-		if (keyList.isEmpty()) {
-			keyMapping.remove(monitorKey.getMonitorFileKey());
+			if (keyList.isEmpty()) {
+				keyMapping.remove(monitorKey.getMonitorFileKey());
+			}
 		}
 		if (monitors.isEmpty()) {
 			// nothing in watch

@@ -23,7 +23,7 @@ public class CompositeContentProvider implements FileContentProvider {
 
 	private Queue<FileContentProvider> lastUpdates = new LinkedList<FileContentProvider>();
 
-	protected ContentUpdateObservable updateObservable = new ContentUpdateObservable(
+	protected ContentUpdateObservable externalUpdater = new ContentUpdateObservable(
 			this);
 
 	private ContentUpdateObserver updateNotifier = new ContentUpdateObserver();
@@ -153,6 +153,7 @@ public class CompositeContentProvider implements FileContentProvider {
 	public void init() throws IOException {
 		for (FileContentProvider provider : providers) {
 			provider.addUpdateObserver(updateNotifier);
+			provider.addUpdateObserver(externalUpdater);
 			provider.init();
 		}
 	}
@@ -161,6 +162,7 @@ public class CompositeContentProvider implements FileContentProvider {
 	public void close() throws IOException {
 		for (FileContentProvider provider : providers) {
 			provider.removeUpdateObserver(updateNotifier);
+			provider.removeUpdateObserver(externalUpdater);
 			provider.close();
 		}
 	}
@@ -178,12 +180,12 @@ public class CompositeContentProvider implements FileContentProvider {
 
 	@Override
 	public void addUpdateObserver(Observer observer) {
-		updateObservable.addObserver(observer);
+		externalUpdater.addObserver(observer);
 	}
 
 	@Override
 	public void removeUpdateObserver(Observer observer) {
-		updateObservable.deleteObserver(observer);
+		externalUpdater.deleteObserver(observer);
 	}
 
 }

@@ -5,9 +5,13 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Observable;
 import java.util.Observer;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +45,76 @@ public class UniqueFile implements FileContentProvider {
 
 	private long providerId = providerIdSeed.incrementAndGet();
 
+	private ContentUpdateChecker checker = new ContentUpdateChecker(updater);
+
+	private static class ContentUpdateChecker implements Observer {
+
+		private volatile long lastTickCount = 0;
+
+		public static final long InvalidTick = -1;
+
+		private final ContentUpdateObservable observable;
+
+		private final Lock lock = new ReentrantLock();
+
+		private final Condition sync = lock.newCondition();
+
+		// package-private
+		ContentUpdateChecker(ContentUpdateObservable observable) {
+			this.observable = observable;
+			observable.addObserver(this);
+		}
+
+		@Override
+		public void update(Observable o, Object arg) {
+			if (o != observable) {
+				// not my observable (as this is added to other observable)
+				return;
+			}
+			lock.lock();
+			try {
+				lastTickCount = (Long) arg;
+				sync.signalAll();
+			} finally {
+				lock.unlock();
+			}
+		}
+
+		public void await(long tickCount) throws InterruptedException {
+			lock.lock();
+			try {
+				while (lastTickCount != InvalidTick
+						&& lastTickCount <= tickCount) {
+					sync.await();
+				}
+			} finally {
+				lock.unlock();
+			}
+		}
+
+		public boolean await(long tickCount, long timeout, TimeUnit unit)
+				throws InterruptedException {
+			long nanosTimeout = unit.toNanos(timeout);
+			lock.lock();
+			try {
+				while (lastTickCount != InvalidTick
+						&& lastTickCount <= tickCount) {
+					if (nanosTimeout <= 0L)
+						return false;
+					nanosTimeout = sync.awaitNanos(nanosTimeout);
+				}
+			} finally {
+				lock.unlock();
+			}
+			return true;
+		}
+
+		public long getLastTickCount() {
+			return lastTickCount;
+		}
+
+	}
+
 	public File getFile() {
 		return file;
 	}
@@ -67,7 +141,6 @@ public class UniqueFile implements FileContentProvider {
 
 	@Override
 	public LineRecord readLine() throws IOException, InterruptedException {
-		ContentUpdateChecker checker = updater.getUpdateChecker();
 		while (true) {
 			long tickCount = checker.getLastTickCount();
 			byte[] line = reader.readLine();
@@ -102,7 +175,6 @@ public class UniqueFile implements FileContentProvider {
 	@Override
 	public LineRecord readLine(long timeout, TimeUnit unit) throws IOException,
 			InterruptedException, EOFException {
-		ContentUpdateChecker checker = updater.getUpdateChecker();
 		long startNanoTime = System.nanoTime();
 		long totalNanoTimeout = unit.toNanos(timeout);
 		long nanoTimeout = totalNanoTimeout;
@@ -253,8 +325,7 @@ public class UniqueFile implements FileContentProvider {
 					// file is deleted from current folder
 					currentPath = null;
 					closeChangeKey();
-					updater.getUpdateChecker().update(updater,
-							ContentUpdateChecker.InvalidTick);
+					checker.update(updater, ContentUpdateChecker.InvalidTick);
 				}
 			});
 		}
@@ -262,6 +333,14 @@ public class UniqueFile implements FileContentProvider {
 
 	FileKey getUniqueKey() {
 		return fileKey;
+	}
+
+	long getPosition() {
+		if (reader != null) {
+			return reader.position();
+		} else {
+			return initOffset;
+		}
 	}
 
 	@Override
@@ -272,6 +351,11 @@ public class UniqueFile implements FileContentProvider {
 	@Override
 	public void removeUpdateObserver(Observer observer) {
 		updater.deleteObserver(observer);
+	}
+
+	@Override
+	public String toString() {
+		return String.format("UniqueFile [file=%s]", file);
 	}
 
 }
