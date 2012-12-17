@@ -7,8 +7,8 @@
 			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{40} - %msg%n</pattern>
 		</encoder>
 	</appender>
-	<logger name="com.hp.it.perf.monitor.filemonitor" level="TRACE"/>
-	<logger name="com.hp.it.perf.monitor.filemonitor.FolderContentProvider" level="TRACE"/>
+	<logger name="com.hp.it.perf.monitor.filemonitor" level="DEBUG"/>
+	<logger name="com.hp.it.perf.monitor.filemonitor.FolderContentProvider" level="DEBUG"/>
 	<root level="INFO">
 		<appender-ref ref="STDOUT" />
 	</root>

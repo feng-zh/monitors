@@ -116,6 +116,19 @@ class WatchEntry {
 				}
 				bitSet.set(i);
 			}
+			// always process events to monitor for current folder
+			// TODO null as folder key mapping
+			Set<FileMonitorWatchKeyImpl> folderKeyList = keyMapping.get(null);
+			if (folderKeyList != null) {
+				for (FileMonitorWatchKeyImpl monitorKey : folderKeyList) {
+					BitSet bitSet = eventMasks.get(monitorKey);
+					if (bitSet == null) {
+						bitSet = new BitSet(n);
+						eventMasks.put(monitorKey, bitSet);
+					}
+					bitSet.set(i);
+				}
+			}
 		}
 		for (Map.Entry<FileMonitorWatchKeyImpl, BitSet> entry : eventMasks
 				.entrySet()) {

@@ -180,6 +180,7 @@ public class FolderContentProvider implements FileContentProvider {
 				}
 			} else {
 				// no data loaded
+				file = null;
 			}
 		}
 		return totalLen;
