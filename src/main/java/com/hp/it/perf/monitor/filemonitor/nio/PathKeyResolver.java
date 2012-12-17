@@ -40,7 +40,9 @@ class PathKeyResolver {
 		try {
 			BasicFileAttributes attr = Files.readAttributes(path,
 					BasicFileAttributes.class);
-			return new FileKey(attr.fileKey());
+			Object nativeKey = attr.fileKey();
+			return new FileKey(nativeKey == null ? path.toRealPath().toString()
+					: nativeKey);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			return null;
@@ -98,13 +100,18 @@ class PathKeyResolver {
 			return null;
 		}
 		for (Path path : directoryStream) {
-			BasicFileAttributes attr;
+			Object nativeKey;
 			try {
+				BasicFileAttributes attr;
 				attr = Files.readAttributes(path, BasicFileAttributes.class);
+				nativeKey = attr.fileKey();
+				if (nativeKey == null) {
+					nativeKey = path.toRealPath().toString();
+				}
 			} catch (IOException ignored) {
 				continue;
 			}
-			if (isSameKey(new FileKey(attr.fileKey()), fileKey)) {
+			if (isSameKey(new FileKey(nativeKey), fileKey)) {
 				return path;
 			}
 		}
