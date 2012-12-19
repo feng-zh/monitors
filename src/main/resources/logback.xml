@@ -8,6 +8,7 @@
 		</encoder>
 	</appender>
 	<logger name="com.hp.it.perf.monitor.filemonitor" level="DEBUG"/>
+	<logger name="com.hp.it.perf.monitor.filemonitor.CompositeContentProvider" level="DEBUG"/>
 	<logger name="com.hp.it.perf.monitor.filemonitor.FolderContentProvider" level="DEBUG"/>
 	<root level="INFO">
 		<appender-ref ref="STDOUT" />

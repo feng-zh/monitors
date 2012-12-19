@@ -2,15 +2,26 @@ package com.hp.it.perf.monitor.filemonitor;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.lang.ref.WeakReference;
 import java.util.Arrays;
+import java.util.concurrent.DelayQueue;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RandomAccessFileReader implements Closeable {
 
+	private static Logger log = LoggerFactory
+			.getLogger(RandomAccessFileReader.class);
+
 	private RandomAccessFile access;
 
-	private int lineNumber;
+	private int loadedLineNumber;
 
 	private BytesBuffer lineBuf = new BytesBuffer();
 
@@ -19,6 +30,85 @@ public class RandomAccessFileReader implements Closeable {
 	private byte[] readBuf = new byte[1024];
 
 	private long position;
+
+	private File file;
+
+	private int idleTimeout = 0;
+
+	private boolean closed = true;
+
+	private static DelayQueue<TimeoutReaderReference> keepAliveQueue = new DelayQueue<TimeoutReaderReference>();
+
+	private TimeoutReaderReference timeoutReference;
+
+	static {
+		Thread keepAliveThread = new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				while (true) {
+					try {
+						RandomAccessFileReader timeoutReader = keepAliveQueue
+								.take().getReader();
+						if (timeoutReader != null) {
+							timeoutReader.tryOffline();
+						}
+					} catch (InterruptedException e) {
+						break;
+					}
+				}
+			}
+		});
+		keepAliveThread.setDaemon(true);
+		keepAliveThread.setName("Reader keepalive thread");
+		keepAliveThread.start();
+	}
+
+	private static class TimeoutReaderReference implements Delayed {
+
+		private final WeakReference<RandomAccessFileReader> readerRef;
+		private final int timeout;
+		private volatile long delayTime;
+		private volatile long lastCheckNanoTime;
+
+		public TimeoutReaderReference(RandomAccessFileReader reader,
+				int timeoutSec) {
+			this.readerRef = new WeakReference<RandomAccessFileReader>(reader);
+			this.timeout = timeoutSec;
+			ping();
+		}
+
+		public void ping() {
+			lastCheckNanoTime = System.nanoTime();
+			delayTime = TimeUnit.SECONDS.toNanos(timeout);
+		}
+
+		@Override
+		public int compareTo(Delayed o) {
+			long od = o.getDelay(TimeUnit.NANOSECONDS);
+			long md = getDelay(TimeUnit.NANOSECONDS);
+			if (md < od) {
+				return -1;
+			} else if (md > od) {
+				return 1;
+			} else {
+				return 0;
+			}
+		}
+
+		@Override
+		public long getDelay(TimeUnit unit) {
+			long current = System.nanoTime();
+			delayTime -= (current - lastCheckNanoTime);
+			lastCheckNanoTime = current;
+			return unit.convert(delayTime, TimeUnit.NANOSECONDS);
+		}
+
+		public RandomAccessFileReader getReader() {
+			return readerRef.get();
+		}
+
+	}
 
 	private static class BytesBuffer {
 
@@ -111,29 +201,91 @@ public class RandomAccessFileReader implements Closeable {
 		}
 	}
 
-	public RandomAccessFileReader(File file, long initOffset)
-			throws IOException {
-		this.access = new RandomAccessFile(file.getAbsoluteFile(), "r");
-		if (initOffset < 0) {
-			// move to end
-			initOffset = Long.MAX_VALUE;
-		}
-		initOffset = Math.min(initOffset, access.length());
-		if (initOffset > 0) {
-			access.seek(initOffset);
-			this.position = initOffset;
+	public RandomAccessFileReader(File file) {
+		this.file = file;
+	}
+
+	private synchronized void tryOffline() {
+		if (timeoutReference.getDelay(TimeUnit.NANOSECONDS) > 0) {
+			// maybe just keep alive again
+			keepAliveQueue.add(timeoutReference);
 		} else {
-			this.position = 0;
+			timeoutReference = null;
+			// start off-line
+			// off access reader
+			try {
+				close0();
+			} catch (IOException e) {
+				log.warn("close access file got error: {}", e.toString());
+			}
 		}
+
+	}
+
+	private synchronized void tryKeepAlive() {
+		if (idleTimeout > 0) {
+			if (timeoutReference == null) {
+				timeoutReference = new TimeoutReaderReference(this, idleTimeout);
+				keepAliveQueue.add(timeoutReference);
+			} else {
+				timeoutReference.ping();
+			}
+		}
+	}
+
+	public void setKeepAlive(int idleTimeout) {
+		this.idleTimeout = idleTimeout;
+	}
+
+	public void open(long initOffset, boolean lazyOpen) throws IOException {
+		close();
+		this.closed = false;
+		long len = file.length();
+		this.position = initOffset < 0 ? len : Math.min(initOffset, len);
+		if (!lazyOpen) {
+			open0();
+		}
+	}
+
+	private void open0() throws FileNotFoundException, IOException {
+		this.access = new RandomAccessFile(file, "r");
+		if (position > 0) {
+			access.seek(position);
+		}
+		log.debug("open random access file {} at offset {}", file, position);
 	}
 
 	@Override
 	public void close() throws IOException {
-		access.close();
+		closed = true;
+		close0();
+	}
+
+	private void close0() throws IOException {
+		RandomAccessFile accessFile = access;
+		access = null;
+		if (accessFile != null) {
+			// reset buffer
+			lineBufOffset = 0;
+			lineBuf.delete(0, lineBuf.count);
+			// close access
+			accessFile.close();
+			log.debug("close random access file {} at offset {}", file,
+					position);
+		}
 	}
 
 	// byte[] buf, int off, int len
 	private byte[] readLine0() throws IOException {
+		// check if it is open
+		if (closed) {
+			throw new IOException("file is not open or closed");
+		}
+		if (access == null) {
+			// lazy open
+			open0();
+		}
+		log.trace("readline for {}", file);
 		// check if new line in it
 		int checkOffset = lineBufOffset;
 		int newLineOffset;
@@ -169,18 +321,20 @@ public class RandomAccessFileReader implements Closeable {
 	public byte[] readLine() throws IOException {
 		byte[] line = readLine0();
 		if (line != null) {
-			lineNumber++;
+			loadedLineNumber++;
 			return line;
 		} else {
+			// no data loaded, start keepAlive
+			tryKeepAlive();
 			return null;
 		}
 	}
 
-	public int getLineNumber() {
-		return lineNumber;
+	public int getLoadedLineNumber() {
+		return loadedLineNumber;
 	}
 
-	public void pushBackLine(byte[] line) {
+	void pushBackLine(byte[] line) {
 		lineBuf.insert(0, line);
 		position -= line.length;
 	}

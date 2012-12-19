@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
@@ -34,23 +35,37 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 
 	private ConcurrentMap<FileKey, WatchEntry> watchEntrys = new ConcurrentHashMap<FileKey, WatchEntry>();
 
+	private String watchEntryName = "default";
+
 	private static Logger log = LoggerFactory
 			.getLogger(NioFileMonitorService.class);
 
-	private ExecutorService eventProcess = Executors
-			.newSingleThreadExecutor(new ThreadFactory() {
-
-				@Override
-				public Thread newThread(Runnable r) {
-					Thread thread = Executors.defaultThreadFactory().newThread(
-							r);
-					thread.setDaemon(true);
-					return thread;
-				}
-			});
+	private ExecutorService eventProcess;
 
 	public NioFileMonitorService() throws IOException {
 		watchService = FileSystems.getDefault().newWatchService();
+		init();
+	}
+
+	NioFileMonitorService(String name, WatchService watchService)
+			throws IOException {
+		this.watchService = watchService;
+		watchEntryName = name;
+		init();
+		log.info("init nio monitor service on {} with watch {}",
+				watchEntryName, watchService.getClass());
+	}
+
+	private void init() {
+		eventProcess = Executors.newSingleThreadExecutor(new ThreadFactory() {
+			@Override
+			public Thread newThread(Runnable r) {
+				Thread thread = Executors.defaultThreadFactory().newThread(r);
+				thread.setName("NIO File Monitor [" + watchEntryName + "]");
+				thread.setDaemon(true);
+				return thread;
+			}
+		});
 		eventProcess.submit(this);
 	}
 
@@ -60,7 +75,7 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 		Path path = file.toPath();
 		Path parentPath = path.getParent();
 		if (parentPath == null) {
-			parentPath = path.toAbsolutePath().getParent();
+			parentPath = Paths.get(".");// current work folder
 		}
 		WatchEntry newWatchEntry = prepareWatchEntry(parentPath);
 		// find if related watch for the path is registered
@@ -101,6 +116,8 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 
 	@Override
 	public void run() {
+		log.info("start file monitor service thread: {}", Thread
+				.currentThread().getName());
 		try {
 			while (true) {
 				WatchKey key;
@@ -119,8 +136,9 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 				if (log.isTraceEnabled()) {
 					log.trace("poll {} watch events", events.size());
 					for (WatchEvent<?> event : events) {
-						log.trace("\twatch event {}({}) on '{}'", new Object[] {
-								event.kind(), event.count(), event.context() });
+						log.trace("\twatch event {}({}) on {}/{}",
+								new Object[] { event.kind(), event.count(),
+										watchEntry.getPath(), event.context() });
 					}
 				}
 				// reset key to retrieve pending events

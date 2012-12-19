@@ -46,6 +46,7 @@ public class CompositeContentProvider implements FileContentProvider {
 				log.trace("start taking updated provider on {}", this);
 				updated = updateNotifier.take();
 				if (updated == this) {
+					updated = null;
 					// just notified for check again
 					log.trace("notify by change to refetch");
 					continue;
@@ -87,6 +88,7 @@ public class CompositeContentProvider implements FileContentProvider {
 					break;
 				}
 				if (updated == this) {
+					updated = null;
 					// just notified for check again
 					log.trace("notify by change to refetch");
 					continue;
@@ -122,6 +124,7 @@ public class CompositeContentProvider implements FileContentProvider {
 			if (updated == null) {
 				updated = updateNotifier.poll();
 				if (updated == this) {
+					updated = null;
 					// just notified for check again
 					log.trace("notify by change to refetch");
 					continue;
@@ -186,6 +189,11 @@ public class CompositeContentProvider implements FileContentProvider {
 	@Override
 	public void removeUpdateObserver(Observer observer) {
 		externalUpdater.deleteObserver(observer);
+	}
+
+	@Override
+	public String toString() {
+		return String.format("CompositeContentProvider %s", providers);
 	}
 
 }

@@ -7,6 +7,7 @@ import com.hp.it.perf.monitor.filemonitor.FileMonitorService;
 import com.hp.it.perf.monitor.filemonitor.FolderContentProvider;
 import com.hp.it.perf.monitor.filemonitor.LineRecord;
 import com.hp.it.perf.monitor.filemonitor.UniqueFile;
+import com.hp.it.perf.monitor.filemonitor.nio.MultiMonitorService;
 import com.hp.it.perf.monitor.filemonitor.nio.NioFileMonitorService;
 
 public class FileMonitorExample {
@@ -20,7 +21,7 @@ public class FileMonitorExample {
 	}
 
 	private static void monitorFolder(File sampleFolder) throws Exception {
-		FileMonitorService monitorService = new NioFileMonitorService();
+		FileMonitorService monitorService = new MultiMonitorService();
 		FolderContentProvider folder = new FolderContentProvider();
 		folder.setFolder(sampleFolder);
 		folder.setMonitorService(monitorService);

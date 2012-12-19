@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -68,19 +69,24 @@ class WatchEntry {
 		monitors.clear();
 	}
 
+	Path getPath() {
+		return watchPath;
+	}
+
 	public synchronized void processEvent(List<WatchEvent<?>> events) {
 		long lastUpdated = System.currentTimeMillis();
 		PathKeyResolver currentResolver = new PathKeyResolver(pathKeyResolver);
 		folderTick.incrementAndGet();
 		FileKey[] eventFileKeyList = new FileKey[events.size()];
-		Map<FileMonitorWatchKeyImpl, BitSet> eventMasks = new HashMap<FileMonitorWatchKeyImpl, BitSet>();
+		Map<FileMonitorWatchKeyImpl, BitSet> eventMasks = new LinkedHashMap<FileMonitorWatchKeyImpl, BitSet>();
 		// pre-processing events
 		for (int i = 0, n = events.size(); i < n; i++) {
 			WatchEvent<?> event = events.get(i);
-			Path eventPath = (Path) event.context();
-			if (eventPath == null) {
+			Path eventRelativePath = (Path) event.context();
+			if (eventRelativePath == null) {
 				continue;
 			}
+			Path eventPath = watchPath.resolve(eventRelativePath);
 			Kind<?> eventKind = event.kind();
 			FileKey fileKey;
 			if (eventKind == StandardWatchEventKinds.ENTRY_DELETE) {
@@ -104,19 +110,19 @@ class WatchEntry {
 			}
 			tickNumber.incrementAndGet();
 			Set<FileMonitorWatchKeyImpl> keyList = keyMapping.get(fileKey);
-			if (keyList == null) {
-				// mask all for this event
-				keyList = monitors.keySet();
-			}
-			for (FileMonitorWatchKeyImpl monitorKey : keyList) {
-				BitSet bitSet = eventMasks.get(monitorKey);
-				if (bitSet == null) {
-					bitSet = new BitSet(n);
-					eventMasks.put(monitorKey, bitSet);
+			if (keyList != null) {
+				for (FileMonitorWatchKeyImpl monitorKey : keyList) {
+					BitSet bitSet = eventMasks.get(monitorKey);
+					if (bitSet == null) {
+						bitSet = new BitSet(n);
+						eventMasks.put(monitorKey, bitSet);
+					}
+					bitSet.set(i);
 				}
-				bitSet.set(i);
 			}
-			// always process events to monitor for current folder
+			// else ignore this not registered file key
+			// always process events to monitor for current folder (at end)
+			// so file update get first, then folder updates
 			// TODO null as folder key mapping
 			Set<FileMonitorWatchKeyImpl> folderKeyList = keyMapping.get(null);
 			if (folderKeyList != null) {
@@ -148,7 +154,7 @@ class WatchEntry {
 				FileMonitorEvent monitorEvent = converter.convert(event,
 						eventFileKeyList[i]);
 				log.trace(
-						"{} on '{}' (for {}-{}): {}",
+						"{} on '{}' (for {} {}): {}",
 						new Object[] { event.kind(), event.context(),
 								monitorKey.getMonitorMode(),
 								monitorKey.getMonitorPath(),
@@ -295,6 +301,11 @@ class WatchEntry {
 			// nothing in watch
 			close();
 		}
+	}
+
+	@Override
+	public String toString() {
+		return String.format("WatchEntry (path=%s)", watchPath);
 	}
 
 }

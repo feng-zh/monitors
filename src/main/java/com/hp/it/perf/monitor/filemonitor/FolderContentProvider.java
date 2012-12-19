@@ -82,6 +82,7 @@ public class FolderContentProvider implements FileContentProvider {
 				log.trace("start take updated file on folder {}", folder);
 				file = filesUpdateNotifier.take();
 				if (file == this) {
+					file = null;
 					// just notified for check again
 					log.trace("notify by folder change to refetch");
 					continue;
@@ -124,6 +125,7 @@ public class FolderContentProvider implements FileContentProvider {
 					break;
 				}
 				if (file == this) {
+					file = null;
 					// just notified for check again
 					log.trace("notify by folder change to refetch");
 					continue;
@@ -159,12 +161,14 @@ public class FolderContentProvider implements FileContentProvider {
 			if (file == null) {
 				file = filesUpdateNotifier.poll();
 				if (file == this) {
+					file = null;
 					// just notified for check again
 					log.trace("notify by folder change to refetch");
 					continue;
 				}
 			}
 			if (file == null) {
+				log.trace("no file updated");
 				break;
 			}
 			// reset version
@@ -318,10 +322,18 @@ public class FolderContentProvider implements FileContentProvider {
 		}
 		FileKey fileKey = uniqueFile.getUniqueKey();
 		files.put(fileKey, uniqueFile);
-		lastUpdateFiles.offer(uniqueFile);
+		if (initOffset >= 0) {
+			// need to check if read required (<0 means at end of file)
+			lastUpdateFiles.offer(uniqueFile);
+		}
 		log.debug("single file {} is registered with unique key {}", file,
 				fileKey);
 		return uniqueFile;
+	}
+
+	@Override
+	public String toString() {
+		return String.format("FolderContentProvider (folder=%s)", folder);
 	}
 
 }

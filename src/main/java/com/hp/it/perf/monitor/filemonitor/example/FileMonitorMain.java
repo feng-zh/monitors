@@ -14,7 +14,7 @@ import com.hp.it.perf.monitor.filemonitor.FileMonitorService;
 import com.hp.it.perf.monitor.filemonitor.FolderContentProvider;
 import com.hp.it.perf.monitor.filemonitor.LineRecord;
 import com.hp.it.perf.monitor.filemonitor.UniqueFile;
-import com.hp.it.perf.monitor.filemonitor.nio.NioFileMonitorService;
+import com.hp.it.perf.monitor.filemonitor.nio.MultiMonitorService;
 
 public class FileMonitorMain {
 
@@ -24,6 +24,9 @@ public class FileMonitorMain {
 		public boolean accept(File pathname) {
 			if (pathname.isDirectory())
 				return false;
+			if (pathname.getName().endsWith(".log")) {
+				return true;
+			}
 			String contentType = URLConnection.getFileNameMap()
 					.getContentTypeFor(pathname.toString());
 			return (contentType != null && (contentType.startsWith("text/") || contentType
@@ -40,12 +43,18 @@ public class FileMonitorMain {
 	 */
 	public static void main(String[] args) throws IOException,
 			InterruptedException {
-		if (args.length==0) {
-			args = new String[]{"."};
+		if (args.length == 0) {
+			args = new String[] { "." };
 		}
-		FileMonitorService monitorService = new NioFileMonitorService();
+		boolean monitor = false;
+		UniqueFile.DefaultIdleTimeout = 60;
+		UniqueFile.DefaultLazyOpen = true;
+		FileMonitorService monitorService = new MultiMonitorService();
 		CompositeContentProvider suite = new CompositeContentProvider();
 		for (int i = 0; i < args.length; i++) {
+			if (args[i].equalsIgnoreCase("-monitor")) {
+				monitor = true;
+			}
 			File file = new File(args[i]);
 			if (!file.canRead()) {
 				continue;
@@ -67,9 +76,32 @@ public class FileMonitorMain {
 		suite.init();
 		LineRecord line;
 		refreshFiles(suite);
-		while ((line = suite.readLine()) != null) {
-			System.out.print(getFileName(line.getProviderId(), suite) + ":"
-					+ new String(line.getLine(), "UTF-8"));
+		if (monitor) {
+			String lastFileName = null;
+			int lastLineNo = 0;
+			while ((line = suite.readLine()) != null) {
+				String fileName = getFileName(line.getProviderId(), suite);
+				if (fileName.equals(lastFileName)) {
+					lastLineNo++;
+					System.out.print(".");
+					if (lastLineNo % 10 == 0) {
+						System.out.flush();
+					}
+				} else {
+					if (lastFileName != null) {
+						// end last file
+						System.out.println("(" + lastLineNo + ")");
+					}
+					lastLineNo = 0;
+					lastFileName = fileName;
+					System.out.print("Monitor on " + fileName + ": .");
+				}
+			}
+		} else {
+			while ((line = suite.readLine()) != null) {
+				System.out.print(getFileName(line.getProviderId(), suite) + ":"
+						+ new String(line.getLine(), "UTF-8"));
+			}
 		}
 		suite.close();
 	}

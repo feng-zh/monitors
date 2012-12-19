@@ -23,9 +23,17 @@ public class UniqueFile implements FileContentProvider {
 
 	private static final Logger log = LoggerFactory.getLogger(UniqueFile.class);
 
+	public static int DefaultIdleTimeout = 0;
+
+	public static boolean DefaultLazyOpen = false;
+
 	private File file;
 
 	private long initOffset;
+
+	private int idleTimeout = DefaultIdleTimeout;
+
+	private boolean lazyOpen = DefaultLazyOpen;
 
 	private String originalPath;
 
@@ -139,6 +147,22 @@ public class UniqueFile implements FileContentProvider {
 		this.monitorService = monitorService;
 	}
 
+	public int getIdleTimeout() {
+		return idleTimeout;
+	}
+
+	public void setIdleTimeout(int idleTimeout) {
+		this.idleTimeout = idleTimeout;
+	}
+
+	public boolean isLazyOpen() {
+		return lazyOpen;
+	}
+
+	public void setLazyOpen(boolean lazyOpen) {
+		this.lazyOpen = lazyOpen;
+	}
+
 	@Override
 	public LineRecord readLine() throws IOException, InterruptedException {
 		while (true) {
@@ -159,7 +183,7 @@ public class UniqueFile implements FileContentProvider {
 					log.trace("notify by new change for file {}", file);
 				}
 			} else {
-				return wrapRecord(line, reader.getLineNumber());
+				return wrapRecord(line, reader.getLoadedLineNumber());
 			}
 		}
 	}
@@ -203,7 +227,7 @@ public class UniqueFile implements FileContentProvider {
 					}
 				}
 			} else {
-				return wrapRecord(line, reader.getLineNumber());
+				return wrapRecord(line, reader.getLoadedLineNumber());
 			}
 		}
 		// timeout
@@ -219,7 +243,8 @@ public class UniqueFile implements FileContentProvider {
 			byte[] line = reader.readLine();
 			if (line != null) {
 				onlyEOF = false;
-				LineRecord record = wrapRecord(line, reader.getLineNumber());
+				LineRecord record = wrapRecord(line,
+						reader.getLoadedLineNumber());
 				if (!list.offer(record)) {
 					// queue is full
 					reader.pushBackLine(line);
@@ -299,10 +324,12 @@ public class UniqueFile implements FileContentProvider {
 		if (reader != null) {
 			throw new IllegalStateException("init() call called");
 		}
-		reader = new RandomAccessFileReader(file, initOffset);
+		reader = new RandomAccessFileReader(file);
+		reader.setKeepAlive(idleTimeout);
+		reader.open(initOffset, lazyOpen);
 		log.trace("create random access file reader for file {}", file);
 		fileKey = FileMonitors.getKeyByFile(file);
-		originalPath = file.getAbsolutePath();
+		originalPath = file.getPath();
 		currentPath = originalPath;
 		if (monitorService != null) {
 			changeKey = monitorService.singleRegister(file,
@@ -312,7 +339,7 @@ public class UniqueFile implements FileContentProvider {
 
 				@Override
 				public void onChanged(FileMonitorEvent event) {
-					currentPath = event.getChangedFile().getAbsolutePath();
+					currentPath = event.getChangedFile().getPath();
 				}
 			});
 			log.trace("register change monitor key for file {}", file);
@@ -355,7 +382,7 @@ public class UniqueFile implements FileContentProvider {
 
 	@Override
 	public String toString() {
-		return String.format("UniqueFile [file=%s]", file);
+		return String.format("UniqueFile (file=%s)", file);
 	}
 
 }

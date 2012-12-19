@@ -10,5 +10,7 @@ public interface FileMonitorService {
 
 	public FileMonitorKey folderRegister(File file, FileMonitorMode mode)
 			throws IOException, IllegalStateException;
+	
+	// TODO close operation
 
 }
