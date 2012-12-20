@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.WatchService;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.hp.it.perf.monitor.filemonitor.FileMonitorKey;
@@ -21,16 +22,43 @@ public class MultiMonitorService implements FileMonitorService {
 
 	private Constructor<?> pollingWatchConstructor;
 
+	private Map<Path, FileStore> storeMapCache = new LinkedHashMap<Path, FileStore>() {
+
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		protected boolean removeEldestEntry(
+				java.util.Map.Entry<Path, FileStore> eldest) {
+			return size() > 256;
+		}
+	};
+
 	@Override
 	public FileMonitorKey singleRegister(File file, FileMonitorMode mode)
 			throws IOException, IllegalStateException {
-		return getFileMonitorServiceByPath(file.toPath()).singleRegister(file,
-				mode);
+		return getFileMonitorServiceByPath(file.toPath(), false)
+				.singleRegister(file, mode);
 	}
 
 	private synchronized FileMonitorService getFileMonitorServiceByPath(
-			Path path) throws IOException {
-		FileStore store = Files.getFileStore(path);
+			Path path, boolean folder) throws IOException {
+		// quick check store for path
+		FileStore store = storeMapCache.get(path);
+		if (store == null) {
+			Path realFolderPath;
+			if (folder) {
+				realFolderPath = path.toRealPath();
+			} else {
+				realFolderPath = path.toRealPath().getParent();
+			}
+			store = storeMapCache.get(realFolderPath);
+			if (store == null) {
+				store = Files.getFileStore(path);
+				storeMapCache.put(realFolderPath, store);
+			}
+			storeMapCache.put(path, store);
+		}
+		// end find store
 		FileMonitorService monitorService = storeMonitors.get(store);
 		if (monitorService == null) {
 			monitorService = new NioFileMonitorService(store.name(),
@@ -60,8 +88,8 @@ public class MultiMonitorService implements FileMonitorService {
 	@Override
 	public FileMonitorKey folderRegister(File file, FileMonitorMode mode)
 			throws IOException, IllegalStateException {
-		return getFileMonitorServiceByPath(file.toPath()).folderRegister(file,
-				mode);
+		return getFileMonitorServiceByPath(file.toPath(), true).folderRegister(
+				file, mode);
 	}
 
 }

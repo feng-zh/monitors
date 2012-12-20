@@ -22,8 +22,6 @@ public class FileMonitorMain {
 
 		@Override
 		public boolean accept(File pathname) {
-			if (pathname.isDirectory())
-				return false;
 			if (pathname.getName().endsWith(".log")) {
 				return true;
 			}
@@ -82,7 +80,6 @@ public class FileMonitorMain {
 			while ((line = suite.readLine()) != null) {
 				String fileName = getFileName(line.getProviderId(), suite);
 				if (fileName.equals(lastFileName)) {
-					lastLineNo++;
 					System.out.print(".");
 					if (lastLineNo % 10 == 0) {
 						System.out.flush();
@@ -96,6 +93,7 @@ public class FileMonitorMain {
 					lastFileName = fileName;
 					System.out.print("Monitor on " + fileName + ": .");
 				}
+				lastLineNo++;
 			}
 		} else {
 			while ((line = suite.readLine()) != null) {

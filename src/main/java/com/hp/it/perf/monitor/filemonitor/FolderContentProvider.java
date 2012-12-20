@@ -260,8 +260,8 @@ public class FolderContentProvider implements FileContentProvider {
 		log.trace("register delete monitor key for folder {}", folder);
 		// self update register (for new file added etc)
 		folderUpdateNotifier.addObserver(filesUpdateNotifier);
-		for (File f : folder.listFiles(filter)) {
-			if (!f.isFile()) {
+		for (File f : folder.listFiles()) {
+			if (!f.isFile() || (filter != null && !filter.accept(f))) {
 				continue;
 			}
 			addMonitorFile(f, -1);
