@@ -273,6 +273,7 @@ public class FolderContentProvider implements FileContentProvider {
 		// remove self update
 		folderUpdateNotifier.deleteObserver(filesUpdateNotifier);
 		for (FileContentProvider f : files.values()) {
+			f.removeUpdateObserver(filesUpdateNotifier);
 			f.close();
 		}
 		files.clear();

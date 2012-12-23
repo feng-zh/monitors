@@ -27,7 +27,7 @@ public class RandomAccessFileReader implements Closeable {
 
 	private int lineBufOffset = 0;
 
-	private byte[] readBuf = new byte[1024];
+	private byte[] readBuf = new byte[8 * 1024];
 
 	private long position;
 
@@ -249,15 +249,15 @@ public class RandomAccessFileReader implements Closeable {
 
 	private void open0() throws FileNotFoundException, IOException {
 		this.access = new RandomAccessFile(file, "r");
-		if (position > 0) {
-			access.seek(position);
-		}
+		access.seek(position);
 		log.debug("open random access file {} at offset {}", file, position);
 	}
 
 	@Override
 	public void close() throws IOException {
 		closed = true;
+		keepAliveQueue.remove(timeoutReference);
+		timeoutReference = null;
 		close0();
 	}
 
@@ -277,14 +277,6 @@ public class RandomAccessFileReader implements Closeable {
 
 	// byte[] buf, int off, int len
 	private byte[] readLine0() throws IOException {
-		// check if it is open
-		if (closed) {
-			throw new IOException("file is not open or closed");
-		}
-		if (access == null) {
-			// lazy open
-			open0();
-		}
 		log.trace("readline for {}", file);
 		// check if new line in it
 		int checkOffset = lineBufOffset;
@@ -319,7 +311,17 @@ public class RandomAccessFileReader implements Closeable {
 	}
 
 	public byte[] readLine() throws IOException {
+		// check if it is open
+		if (closed) {
+			throw new IOException("file is not open or closed");
+		}
+		if (access == null) {
+			// lazy open
+			open0();
+		}
 		byte[] line = readLine0();
+		log.trace("readline got {} bytes",
+				(line == null ? "0" : Integer.toString(line.length)));
 		if (line != null) {
 			loadedLineNumber++;
 			return line;

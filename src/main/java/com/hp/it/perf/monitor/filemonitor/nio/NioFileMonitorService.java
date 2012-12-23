@@ -9,14 +9,17 @@ import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -136,7 +139,7 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 				if (log.isTraceEnabled()) {
 					log.trace("poll {} watch events", events.size());
 					for (WatchEvent<?> event : events) {
-						log.trace("\twatch event {}({}) on {}/{}",
+						log.trace("- Event {}({}) on {}/{}",
 								new Object[] { event.kind(), event.count(),
 										watchEntry.getPath(), event.context() });
 					}
@@ -163,5 +166,23 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 		watchEntrys.remove(watchEntry.getFileKey());
 		watchKeys.remove(watchEntry.getWatchKey());
 		watchEntry.close();
+	}
+
+	@Override
+	public synchronized void close() throws IOException {
+		eventProcess.shutdownNow();
+		while (!eventProcess.isTerminated()) {
+			try {
+				eventProcess.awaitTermination(1, TimeUnit.SECONDS);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				break;
+			}
+		}
+		Set<WatchEntry> entries = new HashSet<WatchEntry>(watchKeys.values());
+		for (WatchEntry entry : entries) {
+			closeWatchEntry(entry);
+		}
+		watchService.close();
 	}
 }

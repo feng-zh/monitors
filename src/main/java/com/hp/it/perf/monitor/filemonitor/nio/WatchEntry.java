@@ -56,6 +56,64 @@ class WatchEntry {
 
 	}
 
+	public static final WatchEvent.Kind<Path> ENTRY_RENAME_TO = new RenameWatchEventKind<Path>(
+			"ENTRY_RENAME_TO", Path.class);
+
+	public static final WatchEvent.Kind<Path> ENTRY_RENAME_FROM = new RenameWatchEventKind<Path>(
+			"ENTRY_RENAME_FROM", Path.class);
+
+	private static class RenameWatchEventKind<T> implements WatchEvent.Kind<T> {
+		private final String name;
+		private final Class<T> type;
+
+		RenameWatchEventKind(String name, Class<T> type) {
+			this.name = name;
+			this.type = type;
+		}
+
+		@Override
+		public String name() {
+			return name;
+		}
+
+		@Override
+		public Class<T> type() {
+			return type;
+		}
+
+		@Override
+		public String toString() {
+			return name;
+		}
+	}
+
+	private static class RenameWatchEvent implements WatchEvent<Path> {
+
+		private Kind<Path> kind;
+		private WatchEvent<?> event;
+
+		public RenameWatchEvent(Kind<Path> kind, WatchEvent<?> event) {
+			this.kind = kind;
+			this.event = event;
+		}
+
+		@Override
+		public Kind<Path> kind() {
+			return kind;
+		}
+
+		@Override
+		public int count() {
+			return event.count();
+		}
+
+		@Override
+		public Path context() {
+			return (Path) event.context();
+		}
+
+	}
+
 	public WatchEntry(Path path) throws IOException {
 		watchPath = path;
 		fileKey = pathKeyResolver.resolvePathKey(path);
@@ -63,7 +121,8 @@ class WatchEntry {
 
 	public synchronized void close() {
 		watchKey.cancel();
-		for (FileMonitorWatchKeyImpl monitor : monitors.keySet()) {
+		for (FileMonitorWatchKeyImpl monitor : new HashSet<FileMonitorWatchKeyImpl>(
+				monitors.keySet())) {
 			monitor.close();
 		}
 		monitors.clear();
@@ -78,6 +137,10 @@ class WatchEntry {
 		PathKeyResolver currentResolver = new PathKeyResolver(pathKeyResolver);
 		folderTick.incrementAndGet();
 		FileKey[] eventFileKeyList = new FileKey[events.size()];
+		// use bit set to save memory allocation and unnecessary checking
+		// if not rename possible
+		BitSet deleteMask = new BitSet(events.size());
+		BitSet createMask = new BitSet(events.size());
 		Map<FileMonitorWatchKeyImpl, BitSet> eventMasks = new LinkedHashMap<FileMonitorWatchKeyImpl, BitSet>();
 		// pre-processing events
 		for (int i = 0, n = events.size(); i < n; i++) {
@@ -92,9 +155,15 @@ class WatchEntry {
 			if (eventKind == StandardWatchEventKinds.ENTRY_DELETE) {
 				fileKey = currentResolver.getKeyForDeleted(eventPath);
 				eventFileKeyList[i] = fileKey;
+				if (fileKey != null) {
+					deleteMask.set(i);
+				}
 			} else if (eventKind == StandardWatchEventKinds.ENTRY_CREATE) {
 				fileKey = currentResolver.resolvePathKey(eventPath);
 				eventFileKeyList[i] = fileKey;
+				if (fileKey != null) {
+					createMask.set(i);
+				}
 			} else if (eventKind == StandardWatchEventKinds.ENTRY_MODIFY) {
 				fileKey = currentResolver.fastResolvePathKey(eventPath);
 				eventFileKeyList[i] = fileKey;
@@ -136,6 +205,30 @@ class WatchEntry {
 				}
 			}
 		}
+		// check if rename processing (create and delete)
+		if (deleteMask.cardinality() != 0 && createMask.cardinality() != 0) {
+			Map<FileKey, Integer> fileKeyMap = new HashMap<FileKey, Integer>();
+			for (int i = deleteMask.nextSetBit(0); i >= 0; i = deleteMask
+					.nextSetBit(i + 1)) {
+				fileKeyMap.put(eventFileKeyList[i], i);
+			}
+			for (int i = createMask.nextSetBit(0); i >= 0; i = createMask
+					.nextSetBit(i + 1)) {
+				FileKey fileKey = eventFileKeyList[i];
+				Integer deleteEventIndex = fileKeyMap.remove(fileKey);
+				if (deleteEventIndex != null) {
+					// remove delete event
+					events.set(
+							deleteEventIndex.intValue(),
+							new RenameWatchEvent(ENTRY_RENAME_FROM, events
+									.get(deleteEventIndex.intValue())));
+					events.set(
+							i,
+							new RenameWatchEvent(ENTRY_RENAME_TO, events.get(i)));
+				}
+			}
+		}
+		// processing events to downstream
 		for (Map.Entry<FileMonitorWatchKeyImpl, BitSet> entry : eventMasks
 				.entrySet()) {
 			FileMonitorWatchKeyImpl monitorKey = entry.getKey();
@@ -154,7 +247,7 @@ class WatchEntry {
 				FileMonitorEvent monitorEvent = converter.convert(event,
 						eventFileKeyList[i]);
 				log.trace(
-						"{} on '{}' (for {} {}): {}",
+						"{} on '{}' match {}({})? {}",
 						new Object[] { event.kind(), event.context(),
 								monitorKey.getMonitorMode(),
 								monitorKey.getMonitorPath(),
@@ -178,7 +271,6 @@ class WatchEntry {
 		if (monitors == null) {
 			monitors = new HashMap<FileMonitorWatchKeyImpl, FileMonitorConverter>();
 		}
-		final Kind<?> watchKind = toWatchKind(mode);
 		final FileKey monitorFileKey;
 		if (path != null) {
 			monitorFileKey = pathKeyResolver.resolvePathKey(path);
@@ -210,6 +302,7 @@ class WatchEntry {
 		if (monitorFileKey != null) {
 			tickNumbers.put(monitorFileKey, new AtomicLong());
 		}
+		final Kind<?> watchKind = toWatchKind(mode);
 		monitors.put(monitorKey, new FileMonitorConverter() {
 
 			private Path fileMonitorPath = path;
@@ -224,8 +317,8 @@ class WatchEntry {
 				if (event.kind() != fileMonitorKind) {
 					return null;
 				}
-				Path entryPath = (Path) event.context();
-				if (entryPath == null) {
+				Path eventRelativePath = (Path) event.context();
+				if (eventRelativePath == null) {
 					return null;
 				}
 				if (fileMonitorPath != null) {
@@ -248,7 +341,8 @@ class WatchEntry {
 								.get() : tickNumbers.get(eventFileKey).get());
 				monitorEvent.setMonitorFile(watchPath.toFile());
 				monitorEvent.setMode(mode);
-				monitorEvent.setChangedFile(entryPath.toFile());
+				monitorEvent.setChangedFile(watchPath
+						.resolve(eventRelativePath).toFile());
 				monitorEvent.setChangedFileKey(eventFileKey);
 				monitorEvent.setMonitorKey(monitorKey);
 				return monitorEvent;
@@ -260,6 +354,9 @@ class WatchEntry {
 					StandardWatchEventKinds.ENTRY_MODIFY,
 					StandardWatchEventKinds.ENTRY_DELETE },
 					SensitivityWatchEventModifier.HIGH);
+			log.debug(
+					"register nio watch service on path {} with create/modify/delete kinds",
+					watchPath);
 			watchKeys.put(watchKey, this);
 		}
 		return monitorKey;
@@ -273,6 +370,8 @@ class WatchEntry {
 			return StandardWatchEventKinds.ENTRY_CREATE;
 		case DELETE:
 			return StandardWatchEventKinds.ENTRY_DELETE;
+		case RENAME:
+			return ENTRY_RENAME_TO;
 		default:
 			throw new UnsupportedOperationException(mode.toString());
 		}

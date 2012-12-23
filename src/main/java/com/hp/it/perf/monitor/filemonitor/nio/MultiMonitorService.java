@@ -9,8 +9,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.WatchService;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import com.hp.it.perf.monitor.filemonitor.FileMonitorKey;
 import com.hp.it.perf.monitor.filemonitor.FileMonitorMode;
@@ -90,6 +93,17 @@ public class MultiMonitorService implements FileMonitorService {
 			throws IOException, IllegalStateException {
 		return getFileMonitorServiceByPath(file.toPath(), true).folderRegister(
 				file, mode);
+	}
+
+	@Override
+	public synchronized void close() throws IOException {
+		Set<Entry<FileStore, FileMonitorService>> entries = new HashSet<Map.Entry<FileStore, FileMonitorService>>(
+				storeMonitors.entrySet());
+		for (Entry<FileStore, FileMonitorService> entry : entries) {
+			entry.getValue().close();
+			storeMonitors.remove(entry.getKey());
+		}
+		storeMapCache.clear();
 	}
 
 }

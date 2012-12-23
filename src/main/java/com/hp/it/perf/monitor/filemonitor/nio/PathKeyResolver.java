@@ -80,7 +80,7 @@ class PathKeyResolver {
 			if (newPath != null) {
 				parent.updatePathKey(newPath, oldKey);
 				// new file exists
-				return null;
+				return oldKey;
 			} else {
 				// not exists
 				return oldKey;

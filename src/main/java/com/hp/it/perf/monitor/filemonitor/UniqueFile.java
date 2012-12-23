@@ -55,6 +55,8 @@ public class UniqueFile implements FileContentProvider {
 
 	private ContentUpdateChecker checker = new ContentUpdateChecker(updater);
 
+	private FileMonitorKey renameKey;
+
 	private static class ContentUpdateChecker implements Observer {
 
 		private volatile long lastTickCount = 0;
@@ -272,6 +274,7 @@ public class UniqueFile implements FileContentProvider {
 			reader = null;
 			log.trace("close reader for file {}", file);
 		}
+		closeRenameKey();
 		closeDeleteKey();
 		closeChangeKey();
 	}
@@ -291,6 +294,15 @@ public class UniqueFile implements FileContentProvider {
 			changeKey.close();
 			changeKey = null;
 			log.trace("unregister change monitor key for file {}", file);
+		}
+	}
+
+	private void closeRenameKey() {
+		if (renameKey != null) {
+			renameKey.removeMonitorListener(updater);
+			renameKey.close();
+			renameKey = null;
+			log.trace("unregister rename monitor key for file {}", file);
 		}
 	}
 
@@ -339,20 +351,40 @@ public class UniqueFile implements FileContentProvider {
 
 				@Override
 				public void onChanged(FileMonitorEvent event) {
-					currentPath = event.getChangedFile().getPath();
+					String newPath = event.getChangedFile().getPath();
+					// if (newPath != null && !newPath.equals(currentPath)) {
+					log.debug("file {} is renamed as {}", currentPath, newPath);
+					// }
+					currentPath = newPath;
 				}
 			});
 			log.trace("register change monitor key for file {}", file);
 			deleteKey = monitorService.singleRegister(file,
 					FileMonitorMode.DELETE);
+			deleteKey.addMonitorListener(updater);
 			deleteKey.addMonitorListener(new FileMonitorListener() {
 
 				@Override
 				public void onChanged(FileMonitorEvent event) {
 					// file is deleted from current folder
+					log.debug("file {} is deleted from current folder",
+							currentPath);
 					currentPath = null;
 					closeChangeKey();
 					checker.update(updater, ContentUpdateChecker.InvalidTick);
+				}
+			});
+			renameKey = monitorService.singleRegister(file,
+					FileMonitorMode.RENAME);
+			renameKey.addMonitorListener(updater);
+			renameKey.addMonitorListener(new FileMonitorListener() {
+
+				@Override
+				public void onChanged(FileMonitorEvent event) {
+					// file is renamed in current folder
+					String newPath = event.getChangedFile().getPath();
+					log.debug("file {} is renamed as {}", currentPath, newPath);
+					currentPath = newPath;
 				}
 			});
 		}
@@ -360,14 +392,6 @@ public class UniqueFile implements FileContentProvider {
 
 	FileKey getUniqueKey() {
 		return fileKey;
-	}
-
-	long getPosition() {
-		if (reader != null) {
-			return reader.position();
-		} else {
-			return initOffset;
-		}
 	}
 
 	@Override
