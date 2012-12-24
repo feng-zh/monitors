@@ -347,17 +347,17 @@ public class UniqueFile implements FileContentProvider {
 			changeKey = monitorService.singleRegister(file,
 					FileMonitorMode.MODIFY);
 			changeKey.addMonitorListener(updater);
-			changeKey.addMonitorListener(new FileMonitorListener() {
-
-				@Override
-				public void onChanged(FileMonitorEvent event) {
-					String newPath = event.getChangedFile().getPath();
-					// if (newPath != null && !newPath.equals(currentPath)) {
-					log.debug("file {} is renamed as {}", currentPath, newPath);
-					// }
-					currentPath = newPath;
-				}
-			});
+//			changeKey.addMonitorListener(new FileMonitorListener() {
+//
+//				@Override
+//				public void onChanged(FileMonitorEvent event) {
+//					String newPath = event.getChangedFile().getPath();
+//					// if (newPath != null && !newPath.equals(currentPath)) {
+//					log.debug("file {} is renamed as {}", currentPath, newPath);
+//					// }
+//					currentPath = newPath;
+//				}
+//			});
 			log.trace("register change monitor key for file {}", file);
 			deleteKey = monitorService.singleRegister(file,
 					FileMonitorMode.DELETE);

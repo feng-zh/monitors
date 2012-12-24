@@ -180,6 +180,9 @@ class FileTeseBuilder implements Closeable {
 		}
 		if (file.renameTo(newFile)) {
 			log.trace("{} rename to {}", file.getName(), newFile.getName());
+		} else {
+			log.warn("{} cannot rename to {}", file.getName(),
+					newFile.getName());
 		}
 		newFile.deleteOnExit();
 		return newFile;

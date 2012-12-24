@@ -209,9 +209,11 @@ public class RandomAccessFileReader implements Closeable {
 		if (timeoutReference.getDelay(TimeUnit.NANOSECONDS) > 0) {
 			// maybe just keep alive again
 			keepAliveQueue.add(timeoutReference);
+			log.trace("re-add file reader back to queue: {}", file);
 		} else {
 			timeoutReference = null;
 			// start off-line
+			log.trace("offline reader: {}", file);
 			// off access reader
 			try {
 				close0();
@@ -227,6 +229,7 @@ public class RandomAccessFileReader implements Closeable {
 			if (timeoutReference == null) {
 				timeoutReference = new TimeoutReaderReference(this, idleTimeout);
 				keepAliveQueue.add(timeoutReference);
+				log.trace("add file reader into keep alive queue: {}", file);
 			} else {
 				timeoutReference.ping();
 			}
@@ -281,17 +284,34 @@ public class RandomAccessFileReader implements Closeable {
 		// check if new line in it
 		int checkOffset = lineBufOffset;
 		int newLineOffset;
-		while ((newLineOffset = lineBuf.indexOf((byte) '\n', checkOffset)) < 0) {
-			// no new line
-			checkOffset = lineBuf.length();
-			// check underline reader
-			int readLen;
-			if ((readLen = access.read(readBuf)) != -1) {
-				lineBuf.append(readBuf, 0, readLen);
+		while (true) {
+			newLineOffset = lineBuf.indexOf((byte) '\n', checkOffset);
+			if (newLineOffset < 0) {
+				// no new line
+				checkOffset = lineBuf.length();
+				// check underline reader
+				int readLen;
+				if ((readLen = access.read(readBuf)) != -1) {
+					lineBuf.append(readBuf, 0, readLen);
+				} else {
+					// no data read till now
+					tryKeepAlive();
+					// return -1
+					return null;
+				}
+			} else if (newLineOffset + 1 == lineBuf.length()) {
+				// buffer contains only one line, try load more
+				int readLen;
+				if ((readLen = access.read(readBuf)) != -1) {
+					lineBuf.append(readBuf, 0, readLen);
+				} else {
+					// no data read in underline reader
+					tryKeepAlive();
+				}
+				break;
 			} else {
-				// no data read till now
-				// return -1
-				return null;
+				// buffer contains new line and others
+				break;
 			}
 		}
 		// get data with new line
@@ -326,8 +346,7 @@ public class RandomAccessFileReader implements Closeable {
 			loadedLineNumber++;
 			return line;
 		} else {
-			// no data loaded, start keepAlive
-			tryKeepAlive();
+			// no data loaded
 			return null;
 		}
 	}

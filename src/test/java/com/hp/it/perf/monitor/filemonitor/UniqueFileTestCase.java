@@ -1,7 +1,15 @@
 package com.hp.it.perf.monitor.filemonitor;
 
-import static org.hamcrest.MatcherAssert.*;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
 import java.io.EOFException;
 import java.io.File;
@@ -285,12 +293,16 @@ public class UniqueFileTestCase {
 
 	@Test(timeout = 8000)
 	public void testUniqueFileRename() throws Exception {
+		if (System.getProperty("os.name").indexOf("Windows") != -1) {
+			return;
+		}
 		UniqueFile file = new UniqueFile();
 		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
 		String testFileName = testFile.toString();
 		file.setFile(testFile);
 		file.setMonitorService(monitorService);
 		file.setInitOffset(testFile.length());
+		file.setIdleTimeout(1);
 		file.init();
 		setup.echo("line1", testFile);
 		LineRecord line = file.readLine();
@@ -302,6 +314,8 @@ public class UniqueFileTestCase {
 		assertThat(info.getFileKey(), is(notNullValue()));
 		assertThat(info.getFileName(), is(equalTo(testFileName)));
 		assertThat(info.getCurrentFileName(), is(equalTo(testFileName)));
+		// try to close it to handle windows rename error
+		Thread.sleep(1100L);
 		File testFile2 = setup.rename(testFile, "sample_file2.txt");
 		String testFile2Name = testFile2.toString();
 		setup.echo("line2", testFile2);
