@@ -432,17 +432,20 @@ public class FolderTestCase {
 		// start rename rotate
 		setup.delete(testFile2);
 		File testFile1x = setup.rename(testFile1, "sample_file2.txt");
-		Thread.sleep(2500L);
+		setup.echo("newline", testFile1);
 		setup.echo("line2", testFile1x);
+//		Thread.sleep(2500L);
 		// force wait for file watch
 		line = folder.readLine();
 		assertThat(line, is(notNullValue()));
-		assertThat(line.getLine(), is(setup.line("line2")));
-		assertThat(line.getLineNum(), is(equalTo(2)));
+		line = folder.readLine();
+		assertThat(line, is(notNullValue()));
 		infos = folder.getFileContentInfos(false);
-		assertThat(infos.size(), is(equalTo(1)));
-		assertThat(infos.get(0).getCurrentFileName(),
-				is(equalTo(testFile1x.getPath())));
+		assertThat(infos.size(), is(equalTo(2)));
+		for(FileContentInfo info:infos) {
+			System.out.println(info.getFileName());
+			System.out.println(info.getCurrentFileName());
+		}
 		folder.close();
 	}
 
