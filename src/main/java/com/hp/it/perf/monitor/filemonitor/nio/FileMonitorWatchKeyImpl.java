@@ -1,6 +1,5 @@
 package com.hp.it.perf.monitor.filemonitor.nio;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -24,8 +23,6 @@ class FileMonitorWatchKeyImpl implements FileMonitorKey {
 	private FileMonitorMode mode;
 
 	private long lastUpdated;
-
-	private Path currentPath;
 
 	FileMonitorWatchKeyImpl(WatchEntry watchEntry, Path path, FileKey fileKey,
 			FileMonitorMode mode) {
@@ -51,10 +48,6 @@ class FileMonitorWatchKeyImpl implements FileMonitorKey {
 		this.lastUpdated = lastUpdated;
 	}
 
-	void setCurrentPath(Path currentPath) {
-		this.currentPath = currentPath;
-	}
-
 	@Override
 	public void close() {
 		watchEntry.removeFileMonitorKey(this);
@@ -63,11 +56,6 @@ class FileMonitorWatchKeyImpl implements FileMonitorKey {
 	@Override
 	public long getLastUpdated() {
 		return lastUpdated;
-	}
-
-	@Override
-	public File getCurrentFile() {
-		return currentPath.toFile();
 	}
 
 	@Override

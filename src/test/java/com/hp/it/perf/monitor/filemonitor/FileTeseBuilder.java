@@ -103,6 +103,20 @@ class FileTeseBuilder implements Closeable {
 			close(access);
 		}
 	}
+	
+	public void print(String txt, File targetFile) throws IOException {
+		RandomAccessFile access = null;
+		try {
+			access = new RandomAccessFile(targetFile, "rw");
+			access.seek(access.length());
+			byte[] bs = txt.getBytes();
+			log.trace("print line size of {} to file {}", bs.length, targetFile);
+			access.write(bs);
+			log.trace("print line done.");
+		} finally {
+			close(access);
+		}
+	}
 
 	public byte[] line(String data) {
 		return (data + NEW_LINE).getBytes();
@@ -187,4 +201,13 @@ class FileTeseBuilder implements Closeable {
 		newFile.deleteOnExit();
 		return newFile;
 	}
+
+	public void delete(File file) {
+		if (file.delete()) {
+			log.trace("Delete {} success", file);
+		} else {
+			log.warn("Cannot delete {}", file);
+		}
+	}
+
 }

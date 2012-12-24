@@ -250,7 +250,7 @@ public class UniqueFile implements FileContentProvider {
 				if (!list.offer(record)) {
 					// queue is full
 					reader.pushBackLine(line);
-					break;
+					return QUEUE_FULL;
 				} else {
 					maxSize--;
 					lines++;
@@ -258,7 +258,7 @@ public class UniqueFile implements FileContentProvider {
 			} else {
 				if (onlyEOF && changeKey == null) {
 					// only eof and no change monitor
-					return -1;
+					return EOF;
 				} else {
 					break;
 				}
@@ -347,21 +347,20 @@ public class UniqueFile implements FileContentProvider {
 			changeKey = monitorService.singleRegister(file,
 					FileMonitorMode.MODIFY);
 			changeKey.addMonitorListener(updater);
-//			changeKey.addMonitorListener(new FileMonitorListener() {
-//
-//				@Override
-//				public void onChanged(FileMonitorEvent event) {
-//					String newPath = event.getChangedFile().getPath();
-//					// if (newPath != null && !newPath.equals(currentPath)) {
-//					log.debug("file {} is renamed as {}", currentPath, newPath);
-//					// }
-//					currentPath = newPath;
-//				}
-//			});
+			// changeKey.addMonitorListener(new FileMonitorListener() {
+			//
+			// @Override
+			// public void onChanged(FileMonitorEvent event) {
+			// String newPath = event.getChangedFile().getPath();
+			// // if (newPath != null && !newPath.equals(currentPath)) {
+			// log.debug("file {} is renamed as {}", currentPath, newPath);
+			// // }
+			// currentPath = newPath;
+			// }
+			// });
 			log.trace("register change monitor key for file {}", file);
 			deleteKey = monitorService.singleRegister(file,
 					FileMonitorMode.DELETE);
-			deleteKey.addMonitorListener(updater);
 			deleteKey.addMonitorListener(new FileMonitorListener() {
 
 				@Override
@@ -374,9 +373,9 @@ public class UniqueFile implements FileContentProvider {
 					checker.update(updater, ContentUpdateChecker.InvalidTick);
 				}
 			});
+			deleteKey.addMonitorListener(updater);
 			renameKey = monitorService.singleRegister(file,
 					FileMonitorMode.RENAME);
-			renameKey.addMonitorListener(updater);
 			renameKey.addMonitorListener(new FileMonitorListener() {
 
 				@Override
@@ -385,8 +384,11 @@ public class UniqueFile implements FileContentProvider {
 					String newPath = event.getChangedFile().getPath();
 					log.debug("file {} is renamed as {}", currentPath, newPath);
 					currentPath = newPath;
+					reader.changeFileName(event.getChangedFile());
 				}
 			});
+			// make sure reader get rename first
+			renameKey.addMonitorListener(updater);
 		}
 	}
 

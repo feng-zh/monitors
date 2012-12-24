@@ -243,6 +243,10 @@ public class RandomAccessFileReader implements Closeable {
 	public void open(long initOffset, boolean lazyOpen) throws IOException {
 		close();
 		this.closed = false;
+		if (!file.canRead()) {
+			throw new FileNotFoundException(
+					"file cannot read (not found or other error): " + file);
+		}
 		long len = file.length();
 		this.position = initOffset < 0 ? len : Math.min(initOffset, len);
 		if (!lazyOpen) {
@@ -336,8 +340,14 @@ public class RandomAccessFileReader implements Closeable {
 			throw new IOException("file is not open or closed");
 		}
 		if (access == null) {
-			// lazy open
-			open0();
+			// lazy open or was off-line
+			try {
+				open0();
+			} catch (FileNotFoundException e) {
+				// file renamed or deleted
+				log.info("file cannot open: {}", e.getMessage());
+				return null;
+			}
 		}
 		byte[] line = readLine0();
 		log.trace("readline got {} bytes",
@@ -362,5 +372,9 @@ public class RandomAccessFileReader implements Closeable {
 
 	public long position() {
 		return position;
+	}
+
+	void changeFileName(File newName) {
+		this.file = newName;
 	}
 }

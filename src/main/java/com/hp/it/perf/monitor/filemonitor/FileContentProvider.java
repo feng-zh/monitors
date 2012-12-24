@@ -13,6 +13,10 @@ public interface FileContentProvider extends Closeable {
 
 	public final static AtomicLong providerIdSeed = new AtomicLong();
 
+	public final static int EOF = -1;
+
+	public final static int QUEUE_FULL = -2;
+
 	// wait operation
 	public LineRecord readLine() throws IOException, InterruptedException;
 
@@ -20,7 +24,9 @@ public interface FileContentProvider extends Closeable {
 			InterruptedException, EOFException;
 
 	// no-wait operation
-	// -1 if EOF
+	// >0 not full with increased size
+	// -1(EOF) if EOF
+	// -2(QUEUE_FULL) if FULL
 	public int readLines(Queue<LineRecord> list, int maxSize)
 			throws IOException;
 

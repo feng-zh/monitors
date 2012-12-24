@@ -10,7 +10,7 @@
 	</appender>
 	<logger name="com.hp.it.perf.monitor.filemonitor" level="TRACE"/>
 	<logger name="com.hp.it.perf.monitor.filemonitor.CompositeContentProvider" level="DEBUG"/>
-	<logger name="com.hp.it.perf.monitor.filemonitor.FolderContentProvider" level="DEBUG"/>
+	<logger name="com.hp.it.perf.monitor.filemonitor.FolderContentProvider" level="TRACE"/>
 	<root level="INFO">
 		<appender-ref ref="STDOUT" />
 	</root>

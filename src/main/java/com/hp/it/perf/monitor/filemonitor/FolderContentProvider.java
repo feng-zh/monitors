@@ -98,8 +98,17 @@ public class FolderContentProvider implements FileContentProvider {
 				LineRecord line = container.poll();
 				lastUpdateFiles.offer(file);
 				return line;
-			} else if (len == -1) {
-				// TODO EOF of file
+			} else if (len == EOF) {
+				// EOF of file (maybe file is deleted)
+				file = null;
+				// check if any file monitor
+				// TODO no moniotr return null?
+				if (files.isEmpty()) {
+					log.debug("no file monitor on {}", folder);
+					return null;
+				}
+			} else if (len == QUEUE_FULL) {
+				throw new AssertionError("should not queue full");
 			} else {
 				// no data loaded
 			}
@@ -137,8 +146,10 @@ public class FolderContentProvider implements FileContentProvider {
 				LineRecord line = container.poll();
 				lastUpdateFiles.offer(file);
 				return line;
-			} else if (len == -1) {
+			} else if (len == EOF) {
 				// TODO EOF of file
+			} else if (len == QUEUE_FULL) {
+				throw new AssertionError("should not queue full");
 			} else {
 				// no data loaded
 			}
@@ -174,8 +185,13 @@ public class FolderContentProvider implements FileContentProvider {
 			// reset version
 			// TODO concurrent issue
 			int len = file.readLines(list, maxSize);
-			if (len == -1) {
+			if (len == EOF) {
 				// TODO EOF of file
+			} else if (len == QUEUE_FULL) {
+				// queue is full
+				// file not loaded finished
+				lastUpdateFiles.offer(file);
+				return QUEUE_FULL;
 			} else if (len > 0) {
 				totalLen += len;
 				maxSize -= len;
@@ -264,6 +280,7 @@ public class FolderContentProvider implements FileContentProvider {
 			if (!f.isFile() || (filter != null && !filter.accept(f))) {
 				continue;
 			}
+			// TODO constant value
 			addMonitorFile(f, -1);
 		}
 	}
@@ -272,11 +289,16 @@ public class FolderContentProvider implements FileContentProvider {
 	public void close() throws IOException {
 		// remove self update
 		folderUpdateNotifier.deleteObserver(filesUpdateNotifier);
-		for (FileContentProvider f : files.values()) {
+		List<FileContentProvider> toClearFiles;
+		// to avoid deadlock
+		synchronized (this) {
+			toClearFiles = new ArrayList<FileContentProvider>(files.values());
+			files.clear();
+		}
+		for (FileContentProvider f : toClearFiles) {
 			f.removeUpdateObserver(filesUpdateNotifier);
 			f.close();
 		}
-		files.clear();
 	}
 
 	@Override
@@ -300,7 +322,7 @@ public class FolderContentProvider implements FileContentProvider {
 		folderUpdateNotifier.deleteObserver(observer);
 	}
 
-	private UniqueFile addMonitorFile(File file, long initOffset)
+	private synchronized UniqueFile addMonitorFile(File file, long initOffset)
 			throws IOException {
 		UniqueFile uniqueFile = new UniqueFile();
 		uniqueFile.setFile(file);
