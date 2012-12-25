@@ -257,7 +257,10 @@ public class RandomAccessFileReader implements Closeable {
 	private void open0() throws FileNotFoundException, IOException {
 		this.access = new RandomAccessFile(file, "r");
 		access.seek(position);
-		log.debug("open random access file {} at offset {}", file, position);
+		long newPosition = access.getFilePointer();
+		log.debug("open random access file {} at offset {}", file, newPosition
+				+ (newPosition != position ? "(seeking " + position + ")" : ""));
+		position = newPosition;
 	}
 
 	@Override

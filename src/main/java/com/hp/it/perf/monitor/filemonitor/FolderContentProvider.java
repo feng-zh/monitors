@@ -85,6 +85,12 @@ public class FolderContentProvider implements FileContentProvider {
 					file = null;
 					// just notified for check again
 					log.trace("notify by folder change to refetch");
+					// check if no files
+					// TODO no moniotr return null?
+					if (files.isEmpty()) {
+						log.debug("no file monitor on {}", folder);
+						return null;
+					}
 					continue;
 				}
 				log.trace(
@@ -137,6 +143,11 @@ public class FolderContentProvider implements FileContentProvider {
 					file = null;
 					// just notified for check again
 					log.trace("notify by folder change to refetch");
+					// TODO no moniotr return null?
+					if (files.isEmpty()) {
+						log.debug("no file monitor on {}", folder);
+						return null;
+					}
 					continue;
 				}
 			}
@@ -148,6 +159,11 @@ public class FolderContentProvider implements FileContentProvider {
 				return line;
 			} else if (len == EOF) {
 				// TODO EOF of file
+				// TODO no moniotr return null?
+				if (files.isEmpty()) {
+					log.debug("no file monitor on {}", folder);
+					return null;
+				}
 			} else if (len == QUEUE_FULL) {
 				throw new AssertionError("should not queue full");
 			} else {

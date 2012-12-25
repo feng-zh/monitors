@@ -47,6 +47,7 @@ public class UniqueFileTestCase {
 	@Test(timeout = 2000)
 	public void testUniqueFileRead() throws Exception {
 		UniqueFile file = new UniqueFile();
+		setup.registerClosable(file);
 		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
 		file.setMonitorService(monitorService);
 		file.setFile(testFile);
@@ -64,6 +65,7 @@ public class UniqueFileTestCase {
 	@Test(timeout = 2000)
 	public void testUniqueFileLazyRead() throws Exception {
 		UniqueFile file = new UniqueFile();
+		setup.registerClosable(file);
 		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
 		file.setMonitorService(monitorService);
 		file.setFile(testFile);
@@ -82,6 +84,7 @@ public class UniqueFileTestCase {
 	@Test(timeout = 3000)
 	public void testUniqueFileModifyReadTake() throws Exception {
 		UniqueFile file = new UniqueFile();
+		setup.registerClosable(file);
 		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
 		file.setMonitorService(monitorService);
 		file.setFile(testFile);
@@ -100,6 +103,7 @@ public class UniqueFileTestCase {
 	@Test(timeout = 5000)
 	public void testUniqueFileModifyReadPoll() throws Exception {
 		UniqueFile file = new UniqueFile();
+		setup.registerClosable(file);
 		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
 		file.setMonitorService(monitorService);
 		file.setFile(testFile);
@@ -146,6 +150,7 @@ public class UniqueFileTestCase {
 	@Test
 	public void testUniqueFileReadLines() throws Exception {
 		UniqueFile file = new UniqueFile();
+		setup.registerClosable(file);
 		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
 		file.setMonitorService(monitorService);
 		file.setFile(testFile);
@@ -171,6 +176,7 @@ public class UniqueFileTestCase {
 	@Test
 	public void testUniqueFileReadLinesQueueFull() throws Exception {
 		UniqueFile file = new UniqueFile();
+		setup.registerClosable(file);
 		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
 		file.setMonitorService(monitorService);
 		file.setFile(testFile);
@@ -196,6 +202,7 @@ public class UniqueFileTestCase {
 	@Test
 	public void testUniqueFileGetContent() throws Exception {
 		UniqueFile file = new UniqueFile();
+		setup.registerClosable(file);
 		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
 		String testFileName = testFile.toString();
 		file.setMonitorService(monitorService);
@@ -235,6 +242,7 @@ public class UniqueFileTestCase {
 	@Test
 	public void testUniqueFileReadLinesWithNoMonitor() throws Exception {
 		UniqueFile file = new UniqueFile();
+		setup.registerClosable(file);
 		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
 		file.setFile(testFile);
 		file.setInitOffset(testFile.length());
@@ -253,6 +261,7 @@ public class UniqueFileTestCase {
 	@Test
 	public void testUniqueFileModifyReadTakeWithNoMonitor() throws Exception {
 		UniqueFile file = new UniqueFile();
+		setup.registerClosable(file);
 		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
 		file.setFile(testFile);
 		file.setInitOffset(testFile.length());
@@ -270,6 +279,7 @@ public class UniqueFileTestCase {
 	@Test
 	public void testUniqueFileModifyReadPollWithNoMonitor() throws Exception {
 		UniqueFile file = new UniqueFile();
+		setup.registerClosable(file);
 		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
 		file.setFile(testFile);
 		file.setInitOffset(testFile.length());
@@ -289,6 +299,7 @@ public class UniqueFileTestCase {
 			return;
 		}
 		UniqueFile file = new UniqueFile();
+		setup.registerClosable(file);
 		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
 		String testFileName = testFile.toString();
 		file.setFile(testFile);
@@ -328,6 +339,7 @@ public class UniqueFileTestCase {
 	@Test(timeout = 3000)
 	public void testUniqueFileDelete() throws Exception {
 		UniqueFile file = new UniqueFile();
+		setup.registerClosable(file);
 		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
 		String testFileName = testFile.toString();
 		file.setFile(testFile);
@@ -363,6 +375,7 @@ public class UniqueFileTestCase {
 	@Test(timeout = 5000)
 	public void testUniqueFilePartialLineRead() throws Exception {
 		UniqueFile file = new UniqueFile();
+		setup.registerClosable(file);
 		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
 		file.setMonitorService(monitorService);
 		file.setFile(testFile);

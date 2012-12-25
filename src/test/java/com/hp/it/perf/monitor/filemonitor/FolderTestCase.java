@@ -26,7 +26,7 @@ public class FolderTestCase {
 	private FileMonitorService monitorService;
 
 	private FileTeseBuilder setup;
-
+	
 	@Before
 	public void setUp() throws Exception {
 		log.info("[Start Test]");
@@ -45,6 +45,7 @@ public class FolderTestCase {
 	@Test(timeout = 5000)
 	public void testFileRead() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
+		setup.registerClosable(folder);
 		File testFile1 = setup.copy(new File("src/test/data/sample_file1.txt"));
 		File testFile2 = setup.copy(new File("src/test/data/sample_file1.txt"),
 				"sample_file2.txt");
@@ -69,6 +70,7 @@ public class FolderTestCase {
 	@Test(timeout = 5000)
 	public void testFileModifyReadTake() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
+		setup.registerClosable(folder);
 		File testFile1 = setup.copy(new File("src/test/data/sample_file1.txt"));
 		File testFile2 = setup.copy(new File("src/test/data/sample_file1.txt"),
 				"sample_file2.txt");
@@ -93,6 +95,7 @@ public class FolderTestCase {
 	@Test(timeout = 8000)
 	public void testFileModifyReadPoll() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
+		setup.registerClosable(folder);
 		File testFile1 = setup.copy(new File("src/test/data/sample_file1.txt"));
 		folder.setMonitorService(monitorService);
 		folder.setFolder(testFile1.getParentFile());
@@ -139,6 +142,7 @@ public class FolderTestCase {
 	@Test
 	public void testReadLines() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
+		setup.registerClosable(folder);
 		File testFile1 = setup.copy(new File("src/test/data/sample_file1.txt"));
 		File testFile2 = setup.copy(new File("src/test/data/sample_file1.txt"),
 				"sample_file2.txt");
@@ -170,6 +174,7 @@ public class FolderTestCase {
 	@Test
 	public void testReadLinesQueueFull() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
+		setup.registerClosable(folder);
 		File testFile1 = setup.copy(new File("src/test/data/sample_file1.txt"));
 		File testFile2 = setup.copy(new File("src/test/data/sample_file1.txt"),
 				"sample_file2.txt");
@@ -200,6 +205,7 @@ public class FolderTestCase {
 	@Test
 	public void testGetContent() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
+		setup.registerClosable(folder);
 		File testFile1 = setup.copy(new File("src/test/data/sample_file1.txt"));
 		String testFileName1 = testFile1.getPath();
 		folder.setMonitorService(monitorService);
@@ -243,6 +249,7 @@ public class FolderTestCase {
 			return;
 		}
 		FolderContentProvider folder = new FolderContentProvider();
+		setup.registerClosable(folder);
 		File testFile1 = setup.copy(new File("src/test/data/sample_file1.txt"));
 		File testFile2 = setup.copy(new File("src/test/data/sample_file1.txt"),
 				"sample_file2.txt");
@@ -308,6 +315,7 @@ public class FolderTestCase {
 			return;
 		}
 		FolderContentProvider folder = new FolderContentProvider();
+		setup.registerClosable(folder);
 		File testFile1 = setup.copy(new File("src/test/data/sample_file1.txt"));
 		File testFile2 = setup.copy(new File("src/test/data/sample_file1.txt"),
 				"sample_file2.txt");
@@ -370,6 +378,7 @@ public class FolderTestCase {
 	@Test(timeout = 5000)
 	public void testDelete() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
+		setup.registerClosable(folder);
 		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
 		String testFileName = testFile.getPath();
 		folder.setMonitorService(monitorService);
@@ -402,6 +411,7 @@ public class FolderTestCase {
 			return;
 		}
 		FolderContentProvider folder = new FolderContentProvider();
+		setup.registerClosable(folder);
 		File testFile1 = setup.copy(new File("src/test/data/sample_file1.txt"));
 		File testFile2 = setup.copy(new File("src/test/data/sample_file1.txt"),
 				"sample_file2.txt");
@@ -452,6 +462,7 @@ public class FolderTestCase {
 	@Test(timeout = 5000)
 	public void testPartialLineRead() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
+		setup.registerClosable(folder);
 		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
 		folder.setMonitorService(monitorService);
 		folder.setFolder(testFile.getParentFile());

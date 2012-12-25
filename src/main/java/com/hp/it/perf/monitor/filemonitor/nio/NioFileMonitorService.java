@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
@@ -45,6 +46,8 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 
 	private ExecutorService eventProcess;
 
+	private Semaphore startGuard = new Semaphore(0);
+
 	public NioFileMonitorService() throws IOException {
 		watchService = FileSystems.getDefault().newWatchService();
 		init();
@@ -70,6 +73,7 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 			}
 		});
 		eventProcess.submit(this);
+		startGuard.acquireUninterruptibly();
 	}
 
 	@Override
@@ -121,6 +125,7 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 	public void run() {
 		log.info("start file monitor service thread: {}", Thread
 				.currentThread().getName());
+		startGuard.release();
 		try {
 			while (true) {
 				WatchKey key;
@@ -169,7 +174,7 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 	}
 
 	@Override
-	public synchronized void close() throws IOException {
+	public void close() throws IOException {
 		eventProcess.shutdownNow();
 		while (!eventProcess.isTerminated()) {
 			try {
@@ -179,10 +184,13 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 				break;
 			}
 		}
-		Set<WatchEntry> entries = new HashSet<WatchEntry>(watchKeys.values());
-		for (WatchEntry entry : entries) {
-			closeWatchEntry(entry);
+		synchronized (this) {
+			Set<WatchEntry> entries = new HashSet<WatchEntry>(
+					watchKeys.values());
+			for (WatchEntry entry : entries) {
+				closeWatchEntry(entry);
+			}
+			watchService.close();
 		}
-		watchService.close();
 	}
 }

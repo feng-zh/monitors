@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -25,12 +27,25 @@ class FileTeseBuilder implements Closeable {
 
 	private File targetRootFolder;
 
+	private File targetDeleteFolder;
+
 	private Timer timer;
 
+	private boolean moveOnDelete = true;
+
+	private List<Closeable> closeableList = new ArrayList<Closeable>();
+
 	public FileTeseBuilder(String root) {
-		targetRootFolder = new File("target/test-data/" + root);
+		String prefix = "/tmp/filemonitor/";
+		targetRootFolder = new File(prefix + "target/test-data/" + root);
+		targetDeleteFolder = new File(prefix + "target/test-for-removed/"
+				+ root);
+		deleteFiles(targetRootFolder);
+		deleteFiles(targetDeleteFolder);
 		targetRootFolder.deleteOnExit();
 		targetRootFolder.mkdirs();
+		targetDeleteFolder.deleteOnExit();
+		targetDeleteFolder.mkdirs();
 	}
 
 	public File copy(File sourceFile, String name) throws IOException {
@@ -43,13 +58,19 @@ class FileTeseBuilder implements Closeable {
 		targetFile.deleteOnExit();
 		FileChannel sourceChannel = null;
 		FileChannel targetChannel = null;
+		FileInputStream sourceStream = null;
+		FileOutputStream targetStream = null;
 		try {
-			sourceChannel = new FileInputStream(sourceFile).getChannel();
-			targetChannel = new FileOutputStream(targetFile).getChannel();
+			sourceStream = new FileInputStream(sourceFile);
+			sourceChannel = sourceStream.getChannel();
+			targetStream = new FileOutputStream(targetFile);
+			targetChannel = targetStream.getChannel();
 			sourceChannel.transferTo(0, sourceChannel.size(), targetChannel);
 		} finally {
 			close(sourceChannel);
 			close(targetChannel);
+			close(sourceStream);
+			close(targetStream);
 		}
 		targetFile.setLastModified(sourceFile.lastModified());
 	}
@@ -69,25 +90,35 @@ class FileTeseBuilder implements Closeable {
 
 	@Override
 	public void close() throws IOException {
+		for (Closeable closeable : closeableList) {
+			close(closeable);
+		}
+		closeableList.clear();
 		if (!targetRootFolder.exists()) {
 			return;
 		}
-		deleteFile(targetRootFolder);
+		deleteFiles(targetRootFolder);
+		moveOnDelete = false;
+		deleteFiles(targetDeleteFolder);
 		if (timer != null) {
 			timer.cancel();
 			timer = null;
 		}
 	}
 
-	private void deleteFile(File dir) {
-		for (File file : dir.listFiles()) {
+	private void deleteFiles(File dir) {
+		File[] files = dir.listFiles();
+		if (files == null) {
+			return;
+		}
+		for (File file : files) {
 			if (file.isFile()) {
-				file.delete();
+				delete(file);
 			} else {
-				deleteFile(file);
+				deleteFiles(file);
 			}
 		}
-		dir.delete();
+		delete(dir);
 	}
 
 	public void echo(String line, File targetFile) throws IOException {
@@ -103,7 +134,7 @@ class FileTeseBuilder implements Closeable {
 			close(access);
 		}
 	}
-	
+
 	public void print(String txt, File targetFile) throws IOException {
 		RandomAccessFile access = null;
 		try {
@@ -190,7 +221,7 @@ class FileTeseBuilder implements Closeable {
 	public File rename(File file, String newFileName) {
 		File newFile = new File(file.getParentFile(), newFileName);
 		if (newFile.exists()) {
-			newFile.delete();
+			delete(newFile);
 		}
 		if (file.renameTo(newFile)) {
 			log.trace("{} rename to {}", file.getName(), newFile.getName());
@@ -206,8 +237,21 @@ class FileTeseBuilder implements Closeable {
 		if (file.delete()) {
 			log.trace("Delete {} success", file);
 		} else {
-			log.warn("Cannot delete {}", file);
+			log.debug("Cannot delete {}", file);
+			if (moveOnDelete) {
+				File removedFile;
+				removedFile = new File(targetDeleteFolder, file.getName() + "."
+						+ System.nanoTime());
+				removedFile.deleteOnExit();
+				boolean result = file.renameTo(removedFile);
+				log.debug("Move file {} to delete folder as name {}: {}",
+						new Object[] { file, removedFile, result });
+			}
 		}
+	}
+
+	public void registerClosable(Closeable closeable) {
+		closeableList.add(closeable);
 	}
 
 }

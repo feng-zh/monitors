@@ -96,14 +96,16 @@ public class MultiMonitorService implements FileMonitorService {
 	}
 
 	@Override
-	public synchronized void close() throws IOException {
-		Set<Entry<FileStore, FileMonitorService>> entries = new HashSet<Map.Entry<FileStore, FileMonitorService>>(
-				storeMonitors.entrySet());
+	public void close() throws IOException {
+		Set<Entry<FileStore, FileMonitorService>> entries;
+		synchronized (this) {
+			entries = new HashSet<Map.Entry<FileStore, FileMonitorService>>(
+					storeMonitors.entrySet());
+			storeMapCache.clear();
+		}
 		for (Entry<FileStore, FileMonitorService> entry : entries) {
 			entry.getValue().close();
-			storeMonitors.remove(entry.getKey());
 		}
-		storeMapCache.clear();
 	}
 
 }

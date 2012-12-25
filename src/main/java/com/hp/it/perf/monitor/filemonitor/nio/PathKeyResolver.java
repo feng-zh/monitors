@@ -14,12 +14,6 @@ class PathKeyResolver {
 
 	private Map<Path, FileKey> keyMapping = new HashMap<Path, FileKey>(1);
 
-	private PathKeyResolver parent;
-
-	public PathKeyResolver(PathKeyResolver parent) {
-		this.parent = parent;
-	}
-
 	public PathKeyResolver() {
 	}
 
@@ -29,9 +23,6 @@ class PathKeyResolver {
 			// follow link
 			fileKey = resolvePathKey0(path);
 			keyMapping.put(path, fileKey);
-			if (parent != null) {
-				parent.updatePathKey(path, fileKey);
-			}
 		}
 		return fileKey;
 	}
@@ -49,8 +40,12 @@ class PathKeyResolver {
 		}
 	}
 
-	private void updatePathKey(Path path, FileKey fileKey) {
-		keyMapping.put(path, fileKey);
+	public void updatePathKey(Path path, FileKey fileKey) {
+		if (path != null) {
+			keyMapping.put(path, fileKey);
+		} else {
+			keyMapping.remove(path);
+		}
 	}
 
 	public boolean isSamePath(Path path1, Path path2) {
@@ -67,29 +62,27 @@ class PathKeyResolver {
 		return isSameKey(key, pathKey);
 	}
 
-	public FileKey getKeyForDeleted(Path path) {
-		if (parent == null) {
-			return null;
-		}
-		// get history key for path
-		FileKey oldKey = parent.resolvePathKey(path);
-		if (oldKey != null) {
-			// check if old key exists
-			Path newPath = getPathByKey(path.toAbsolutePath().getParent(),
-					oldKey);
-			if (newPath != null) {
-				parent.updatePathKey(newPath, oldKey);
-				// new file exists
-				return oldKey;
-			} else {
-				// not exists
-				return oldKey;
-			}
-		} else {
-			// no history file key
-			return null;
-		}
-	}
+	//
+	// public FileKey getKeyForDeleted(Path path) {
+	// // get history key for path
+	// FileKey oldKey = parent.fastResolvePathKey(path);
+	// if (oldKey != null) {
+	// // check if old key exists
+	// Path newPath = getPathByKey(path.toAbsolutePath().getParent(),
+	// oldKey);
+	// if (newPath != null) {
+	// parent.updatePathKey(newPath, oldKey);
+	// // new file exists
+	// return oldKey;
+	// } else {
+	// // not exists
+	// return oldKey;
+	// }
+	// } else {
+	// // no history file key
+	// return null;
+	// }
+	// }
 
 	public Path getPathByKey(Path dir, FileKey fileKey) {
 		// TODO heavy operation in remote system?
@@ -123,16 +116,8 @@ class PathKeyResolver {
 		return key1 == key2 ? true : (key1 != null && key1.equals(key2));
 	}
 
-	public FileKey fastResolvePathKey(Path path) {
+	public FileKey getCachedKey(Path path) {
 		FileKey fileKey = keyMapping.get(path);
-		if (fileKey == null) {
-			if (parent != null) {
-				fileKey = parent.fastResolvePathKey(path);
-			} else {
-				fileKey = resolvePathKey(path);
-			}
-			keyMapping.put(path, fileKey);
-		}
 		return fileKey;
 	}
 

@@ -339,8 +339,8 @@ public class UniqueFile implements FileContentProvider {
 		reader = new RandomAccessFileReader(file);
 		reader.setKeepAlive(idleTimeout);
 		reader.open(initOffset, lazyOpen);
-		log.trace("create random access file reader for file {}", file);
 		fileKey = FileMonitors.getKeyByFile(file);
+		log.trace("create random access file reader for file {} with key {}", file, fileKey);
 		originalPath = file.getPath();
 		currentPath = originalPath;
 		if (monitorService != null) {
@@ -374,6 +374,7 @@ public class UniqueFile implements FileContentProvider {
 				}
 			});
 			deleteKey.addMonitorListener(updater);
+			log.trace("register delete monitor key for file {}", file);
 			renameKey = monitorService.singleRegister(file,
 					FileMonitorMode.RENAME);
 			renameKey.addMonitorListener(new FileMonitorListener() {
@@ -389,6 +390,7 @@ public class UniqueFile implements FileContentProvider {
 			});
 			// make sure reader get rename first
 			renameKey.addMonitorListener(updater);
+			log.trace("register rename monitor key for file {}", file);
 		}
 	}
 
