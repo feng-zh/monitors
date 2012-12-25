@@ -48,6 +48,8 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 
 	private Semaphore startGuard = new Semaphore(0);
 
+	private PathKeyResolver pathKeyResolver = new PathKeyResolver((Path) null);
+
 	public NioFileMonitorService() throws IOException {
 		watchService = FileSystems.getDefault().newWatchService();
 		init();
@@ -97,7 +99,8 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 	}
 
 	private WatchEntry prepareWatchEntry(Path path) throws IOException {
-		WatchEntry entry = new WatchEntry(path);
+		WatchEntry entry = new WatchEntry(path,
+				pathKeyResolver.resolvePathKey(path));
 		entry.setWatchService(watchService);
 		return entry;
 	}

@@ -41,9 +41,9 @@ class WatchEntry {
 
 	private Path watchPath;
 
-	private PathKeyResolver pathKeyResolver = new PathKeyResolver();
-
 	private Map<FileKey, Set<FileMonitorWatchKeyImpl>> keyMapping;
+
+	private PathKeyResolver currentPathKeyResolver;
 
 	private Map<FileKey, AtomicLong> tickNumbers;
 
@@ -114,9 +114,10 @@ class WatchEntry {
 
 	}
 
-	public WatchEntry(Path path) throws IOException {
+	public WatchEntry(Path path, FileKey fileKey) throws IOException {
 		watchPath = path;
-		fileKey = pathKeyResolver.resolvePathKey(path);
+		this.fileKey = fileKey;
+		currentPathKeyResolver = new PathKeyResolver(watchPath);
 	}
 
 	public synchronized void close() {
@@ -134,87 +135,37 @@ class WatchEntry {
 
 	public synchronized void processEvent(List<WatchEvent<?>> events) {
 		long lastUpdated = System.currentTimeMillis();
-		PathKeyResolver currentResolver = new PathKeyResolver();
 		folderTick.incrementAndGet();
-		FileKey[] eventCurrentFileKeys = new FileKey[events.size()];
-		FileKey[] eventPrevFileKeys = new FileKey[events.size()];
-		// use bit set to save memory allocation and unnecessary checking
-		// if not rename possible
-		BitSet deleteMask = new BitSet(events.size());
-		BitSet createMask = new BitSet(events.size());
+		// filter events
+		List<Map.Entry<WatchEvent<?>, FileKey>> newEvents = preprocessEvents(events);
 		Map<FileMonitorWatchKeyImpl, BitSet> eventMasks = new LinkedHashMap<FileMonitorWatchKeyImpl, BitSet>();
-		Map<FileKey, Path> tobeUpdated = new HashMap<FileKey, Path>();
-		// pre-processing events
-		for (int i = 0, n = events.size(); i < n; i++) {
-			WatchEvent<?> event = events.get(i);
-			Path eventRelativePath = (Path) event.context();
-			if (eventRelativePath == null) {
-				continue;
-			}
-			Path eventPath = watchPath.resolve(eventRelativePath);
-			Kind<?> eventKind = event.kind();
-			FileKey fileKey;
-			if (eventKind == StandardWatchEventKinds.ENTRY_DELETE) {
-				fileKey = pathKeyResolver.getCachedKey(eventPath);
-				if (fileKey != null) {
-					eventPrevFileKeys[i] = fileKey;
-					if (fileKey != null) {
-						deleteMask.set(i);
-					}
-					Path newPath = currentResolver.getPathByKey(watchPath,
-							fileKey);
-					tobeUpdated.put(fileKey, newPath);
+		for (int i = 0, n = newEvents.size(); i < n; i++) {
+			Map.Entry<WatchEvent<?>, FileKey> e = newEvents.get(i);
+			FileKey eventFileKey = e.getValue();
+			log.trace("NEW Event - {}:{}({})", new Object[] {
+					e.getKey().kind(), e.getKey().context(), eventFileKey });
+			if (eventFileKey != null) {
+				// increase tick
+				AtomicLong tickNumber = tickNumbers.get(eventFileKey);
+				if (tickNumber == null) {
+					tickNumber = new AtomicLong();
+					tickNumbers.put(eventFileKey, tickNumber);
 				}
-			} else if (eventKind == StandardWatchEventKinds.ENTRY_MODIFY) {
-				// should in some 'delete' key
-				FileKey oldFileKey = pathKeyResolver.getCachedKey(eventPath);
-				fileKey = currentResolver.resolvePathKey(eventPath);
-				eventCurrentFileKeys[i] = fileKey;
-				eventPrevFileKeys[i] = oldFileKey;
-				if (oldFileKey != null && !oldFileKey.equals(fileKey)) {
-					tobeUpdated
-							.put(oldFileKey, currentResolver.getPathByKey(
-									watchPath, oldFileKey));
-					if (fileKey != null) {
-						tobeUpdated.put(fileKey, eventPath);
-						createMask.set(i);
-					} else {
-						// otherwise, removed presently
-						log.debug(
-								"file currently deleted, ignore event {} for {}",
-								eventKind, eventPath);
-						continue;
+				tickNumber.incrementAndGet();
+				Set<FileMonitorWatchKeyImpl> keyList = keyMapping
+						.get(eventFileKey);
+				if (keyList != null) {
+					for (FileMonitorWatchKeyImpl monitorKey : keyList) {
+						BitSet bitSet = eventMasks.get(monitorKey);
+						if (bitSet == null) {
+							bitSet = new BitSet(n);
+							eventMasks.put(monitorKey, bitSet);
+						}
+						bitSet.set(i);
 					}
-					deleteMask.set(i);
 				}
-			} else if (eventKind == StandardWatchEventKinds.ENTRY_CREATE) {
-				fileKey = currentResolver.resolvePathKey(eventPath);
-				tobeUpdated.put(fileKey, eventPath);
-				eventCurrentFileKeys[i] = fileKey;
-				createMask.set(i);
-			} else {
-				continue;
+				// else ignore this not registered file key
 			}
-			// increase tick
-			AtomicLong tickNumber = tickNumbers.get(fileKey);
-			if (tickNumber == null) {
-				// TODO warning
-				tickNumber = new AtomicLong();
-				tickNumbers.put(fileKey, tickNumber);
-			}
-			tickNumber.incrementAndGet();
-			Set<FileMonitorWatchKeyImpl> keyList = keyMapping.get(fileKey);
-			if (keyList != null) {
-				for (FileMonitorWatchKeyImpl monitorKey : keyList) {
-					BitSet bitSet = eventMasks.get(monitorKey);
-					if (bitSet == null) {
-						bitSet = new BitSet(n);
-						eventMasks.put(monitorKey, bitSet);
-					}
-					bitSet.set(i);
-				}
-			}
-			// else ignore this not registered file key
 			// always process events to monitor for current folder (at end)
 			// so file update get first, then folder updates
 			// TODO null as folder key mapping
@@ -230,39 +181,6 @@ class WatchEntry {
 				}
 			}
 		}
-		// update file keys
-		for(Map.Entry<FileKey, Path> entry:tobeUpdated.entrySet()) {
-			pathKeyResolver.updatePathKey(entry.getValue(), entry.getKey());
-		}
-		// check if rename processing (delete/create, or delete/modify/create)
-		if (deleteMask.cardinality() != 0 && createMask.cardinality() != 0) {
-			Map<FileKey, Integer> fileKeyMap = new HashMap<FileKey, Integer>();
-			for (int i = deleteMask.nextSetBit(0); i >= 0; i = deleteMask
-					.nextSetBit(i + 1)) {
-				FileKey renameFromKey = eventPrevFileKeys[i];
-				fileKeyMap.put(renameFromKey, i);
-			}
-			for (int i = createMask.nextSetBit(0); i >= 0; i = createMask
-					.nextSetBit(i + 1)) {
-				FileKey fileKey = eventCurrentFileKeys[i];
-				Integer renameFromEventIndex = fileKeyMap.remove(fileKey);
-				if (renameFromEventIndex != null) {
-					// change delete to rename_from (except rename_to from
-					// modify)
-					if (events.get(renameFromEventIndex.intValue()).kind() != ENTRY_RENAME_TO) {
-						events.set(
-								renameFromEventIndex.intValue(),
-								new DelegateWatchEvent(ENTRY_RENAME_FROM,
-										events.get(renameFromEventIndex
-												.intValue())));
-					}
-					// change create to rename_to
-					events.set(i, new DelegateWatchEvent(ENTRY_RENAME_TO,
-							events.get(i)));
-				}
-			}
-		}
-		log.info("goes here: " + eventMasks);
 		// processing events to downstream
 		for (Map.Entry<FileMonitorWatchKeyImpl, BitSet> entry : eventMasks
 				.entrySet()) {
@@ -277,11 +195,10 @@ class WatchEntry {
 					bitset.cardinality());
 			for (int i = bitset.nextSetBit(0); i >= 0; i = bitset
 					.nextSetBit(i + 1)) {
-				WatchEvent<?> event = events.get(i);
+				WatchEvent<?> event = newEvents.get(i).getKey();
 				// prepare file key
 				FileMonitorEvent monitorEvent = converter.convert(event,
-						eventCurrentFileKeys[i] == null ? eventPrevFileKeys[i]
-								: eventCurrentFileKeys[i]);
+						newEvents.get(i).getValue());
 				log.trace(
 						"{} on '{}' match {}({})? {}",
 						new Object[] {
@@ -300,6 +217,118 @@ class WatchEntry {
 		}
 	}
 
+	// Handle following special cases
+	// Poll Mode: Delete, Modify, Create (1,2 => 2',3)/Pair rename
+	// Poll Mode: Delete, Create (1 => 2)/Rename
+	// Poll Mode: Modify, Modify (1,2 => 1',2')/Rotate
+	// Poll Mode: Delete, Modify (1,2 => 2')/Move
+	// Native Mode: Delete; Create (1 => 2)
+	// Native Mode: Modify; Delete; Create (1 => 2)
+	// Native Mode: Delete; Create; Delete; Create (1,2 => 2',3)
+	// Native Mode: Delete; Delete; Create; Delete; Create (1,2 => 1',2')/Rotate
+	// Native Mode: Delete; Delete; Create (1,2 => 2')/Move
+	private List<Map.Entry<WatchEvent<?>, FileKey>> preprocessEvents(
+			List<WatchEvent<?>> events) {
+		Map<WatchEvent<?>, FileKey> processedEvents = new LinkedHashMap<WatchEvent<?>, FileKey>();
+		PathKeyResolver historyPathKeyResolver;
+		int version;
+		synchronized (this) {
+			historyPathKeyResolver = currentPathKeyResolver;
+			currentPathKeyResolver = new PathKeyResolver(historyPathKeyResolver);
+			version = currentPathKeyResolver.updateVersion();
+		}
+		// pre-load path file key by impacted path
+		for (int i = 0, n = events.size(); i < n; i++) {
+			WatchEvent<?> event = events.get(i);
+			if (!(event.context() instanceof Path)) {
+				continue;
+			}
+			Path eventPath = watchPath.resolve((Path) event.context());
+			currentPathKeyResolver.resolvePathKey(eventPath, version);
+		}
+		// Processing events
+		for (int i = 0, n = events.size(); i < n; i++) {
+			WatchEvent<?> event = events.get(i);
+			if (!(event.context() instanceof Path)) {
+				continue;
+			}
+			Path eventPath = watchPath.resolve((Path) event.context());
+			Kind<?> eventKind = event.kind();
+			FileKey historyKey = historyPathKeyResolver.resolveCachedPathKey(
+					eventPath, 0);
+			FileKey currentKey = currentPathKeyResolver.resolvePathKey(
+					eventPath, version);
+			boolean pathNotExist = (currentKey == null);
+			if (eventKind == StandardWatchEventKinds.ENTRY_DELETE) {
+				// check if file real deleted or renamed
+				if (pathNotExist
+						&& historyPathKeyResolver.resolveCachedPath(historyKey,
+								0) == null) {
+					// not exist presently, keep this delete event
+					processedEvents.put(event, historyKey);
+				} else {
+					// check if history key exists (in case native part event)
+					if (currentPathKeyResolver.resolvePathByKey(historyKey,
+							version) != null) {
+						// exist
+						processedEvents.put(new DelegateWatchEvent(
+								ENTRY_RENAME_FROM, event), historyKey);
+					} else {
+						processedEvents.put(event, historyKey);
+					}
+				}
+			} else if (eventKind == StandardWatchEventKinds.ENTRY_MODIFY) {
+				// check if file still exist
+				if (pathNotExist) {
+					// native mode, keep it
+					processedEvents.put(event, historyKey);
+				} else if (historyKey != null && historyKey.equals(currentKey)) {
+					// real modify, keep it
+					processedEvents.put(event, currentKey);
+				} else {
+					if (currentPathKeyResolver.resolvePathByKey(historyKey,
+							version) != null) {
+						// exist
+						// this was renamed to other,
+						processedEvents.put(new DelegateWatchEvent(
+								ENTRY_RENAME_FROM, event), historyKey);
+					} else {
+						// not exist
+						processedEvents.put(new DelegateWatchEvent(
+								StandardWatchEventKinds.ENTRY_DELETE, event),
+								historyKey);
+					}
+					if (historyPathKeyResolver.resolveCachedPath(currentKey, 0) != null) {
+						// and some renamed to this
+						processedEvents.put(new DelegateWatchEvent(
+								ENTRY_RENAME_TO, event), currentKey);
+					} else {
+						processedEvents.put(new DelegateWatchEvent(
+								StandardWatchEventKinds.ENTRY_CREATE, event),
+								currentKey);
+					}
+				}
+			} else if (eventKind == StandardWatchEventKinds.ENTRY_CREATE) {
+				// check if file still exist
+				if (pathNotExist) {
+					// native mode, keep it
+					processedEvents.put(event, currentKey);
+				} else if (historyPathKeyResolver.resolveCachedPath(currentKey,
+						0) != null) {
+					// previous exists
+					processedEvents.put(new DelegateWatchEvent(ENTRY_RENAME_TO,
+							event), currentKey);
+				} else {
+					// new created
+					processedEvents.put(event, currentKey);
+				}
+			}
+		}
+		currentPathKeyResolver.updateVersion();
+		return new ArrayList<Map.Entry<WatchEvent<?>, FileKey>>(
+				processedEvents.entrySet());
+	}
+
 	FileKey getFileKey() {
 		return fileKey;
 	}
@@ -312,7 +341,7 @@ class WatchEntry {
 		}
 		final FileKey monitorFileKey;
 		if (path != null) {
-			monitorFileKey = pathKeyResolver.resolvePathKey(path);
+			monitorFileKey = currentPathKeyResolver.resolvePathKey(path);
 			if (monitorFileKey == null) {
 				throw new IOException("no file key found for file " + path);
 			}

@@ -26,7 +26,7 @@ public class FolderTestCase {
 	private FileMonitorService monitorService;
 
 	private FileTeseBuilder setup;
-	
+
 	@Before
 	public void setUp() throws Exception {
 		log.info("[Start Test]");
@@ -444,18 +444,14 @@ public class FolderTestCase {
 		File testFile1x = setup.rename(testFile1, "sample_file2.txt");
 		setup.echo("newline", testFile1);
 		setup.echo("line2", testFile1x);
-//		Thread.sleep(2500L);
 		// force wait for file watch
 		line = folder.readLine();
 		assertThat(line, is(notNullValue()));
 		line = folder.readLine();
 		assertThat(line, is(notNullValue()));
+		Thread.sleep(1000L);
 		infos = folder.getFileContentInfos(false);
 		assertThat(infos.size(), is(equalTo(2)));
-		for(FileContentInfo info:infos) {
-			System.out.println(info.getFileName());
-			System.out.println(info.getCurrentFileName());
-		}
 		folder.close();
 	}
 
