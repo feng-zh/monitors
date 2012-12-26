@@ -81,7 +81,7 @@ public class UniqueFileTestCase {
 		file.close();
 	}
 
-	@Test(timeout = 3000)
+	@Test(timeout = 8000)
 	public void testUniqueFileModifyReadTake() throws Exception {
 		UniqueFile file = new UniqueFile();
 		setup.registerClosable(file);
@@ -118,7 +118,7 @@ public class UniqueFileTestCase {
 			assertThat(line, is(notNullValue()));
 			assertThat(line.getLine(), is(setup.line(data)));
 			assertThat(line.getLineNum(), is(equalTo(1)));
-			assertThat(duration, is(lessThan(5L)));
+			assertThat(duration, is(lessThan(100L)));
 		}
 		// let file modified time change
 		Thread.sleep(1000);
@@ -336,7 +336,7 @@ public class UniqueFileTestCase {
 		file.close();
 	}
 
-	@Test(timeout = 3000)
+	@Test(timeout = 5000)
 	public void testUniqueFileDelete() throws Exception {
 		UniqueFile file = new UniqueFile();
 		setup.registerClosable(file);

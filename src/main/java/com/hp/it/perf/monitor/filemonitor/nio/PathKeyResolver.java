@@ -96,7 +96,8 @@ class PathKeyResolver {
 		if (vHistoryPath != null) {
 			pathKeyMapping.remove(vHistoryPath.getData());
 		}
-		keyPathMapping.remove(currentKey);
+		// not remove until get confirm
+		// keyPathMapping.remove(currentKey);
 		if (vHistoryKey != null) {
 			keyPathMapping.remove(vHistoryKey.getData());
 		}
@@ -145,6 +146,8 @@ class PathKeyResolver {
 		if (vPath != null && vPath.getVersion() >= version) {
 			return vPath.getData();
 		} else if (!searchFolder) {
+			// not found, update it to null
+			removeDeletedPathKey(fileKey);
 			return null;
 		}
 		DirectoryStream<Path> directoryStream;
@@ -182,6 +185,16 @@ class PathKeyResolver {
 		// not found
 		updatePathKey(null, fileKey);
 		return null;
+	}
+
+	private void removeDeletedPathKey(FileKey fileKey) {
+		Versioned<Path> vPath = keyPathMapping.remove(fileKey);
+		if (vPath != null && vPath.getData() != null) {
+			Versioned<FileKey> vFileKey = pathKeyMapping.get(vPath.getData());
+			if (vFileKey != null && isSameKey(vFileKey.getData(), fileKey)) {
+				pathKeyMapping.remove(vPath.getData());
+			}
+		}
 	}
 
 	private static boolean isSameKey(FileKey key1, FileKey key2) {

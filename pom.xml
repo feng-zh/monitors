@@ -1,9 +1,9 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>FileMonitor</groupId>
-	<artifactId>FileMonitor</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<groupId>com.hp.it.perf.ac.monitor</groupId>
+	<artifactId>ac-file-monitor</artifactId>
+	<version>1.0.0-SNAPSHOT</version>
 
 	<build>
 		<plugins>
@@ -29,14 +29,6 @@
 			<artifactId>logback-classic</artifactId>
 			<version>1.0.6</version>
 			<scope>runtime</scope>
-		</dependency>
-		<dependency>
-			<groupId>jpathwatch</groupId>
-			<artifactId>jpathwatch</artifactId>
-			<version>0.95</version>
-			<scope>system</scope>
-			<systemPath>${basedir}/src/lib/jpathwatch-0-95.jar</systemPath>
-			<optional>true</optional>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>

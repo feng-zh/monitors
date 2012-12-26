@@ -187,7 +187,7 @@ public class FolderTestCase {
 		setup.echo("line3", testFile1);
 		setup.echo("line4", testFile2);
 		// wait for poll time window
-		Thread.sleep(2000L);
+		Thread.sleep(2500L);
 		Queue<LineRecord> list = new ArrayBlockingQueue<LineRecord>(2);
 		int count = folder.readLines(list, 3);
 		assertThat(count, is(equalTo(FileContentProvider.QUEUE_FULL)));
