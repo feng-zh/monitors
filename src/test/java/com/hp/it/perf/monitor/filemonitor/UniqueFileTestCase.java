@@ -218,7 +218,7 @@ public class UniqueFileTestCase {
 		assertThat(contentInfos.size(), is(equalTo(1)));
 		FileContentInfo info = contentInfos.get(0);
 		assertThat(info, is(notNullValue()));
-		assertThat(info.getFileKey(), is(notNullValue()));
+		assertThat(info.fileKey(), is(notNullValue()));
 		assertThat(info.getFileName(), is(equalTo(testFileName)));
 		assertThat(info.getCurrentFileName(), is(equalTo(testFileName)));
 		assertThat(info.getProviderId(), is(not(equalTo(0L))));
@@ -229,7 +229,7 @@ public class UniqueFileTestCase {
 		assertThat(contentInfos.size(), is(equalTo(1)));
 		info = contentInfos.get(0);
 		assertThat(info, is(notNullValue()));
-		assertThat(info.getFileKey(), is(notNullValue()));
+		assertThat(info.fileKey(), is(notNullValue()));
 		assertThat(info.getFileName(), is(equalTo(testFileName)));
 		assertThat(info.getCurrentFileName(), is(equalTo(testFileName)));
 		assertThat(info.getProviderId(), is(equalTo(line.getProviderId())));
@@ -314,7 +314,7 @@ public class UniqueFileTestCase {
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		FileContentInfo info = file.getFileContentInfos(false).get(0);
 		assertThat(info, is(notNullValue()));
-		assertThat(info.getFileKey(), is(notNullValue()));
+		assertThat(info.fileKey(), is(notNullValue()));
 		assertThat(info.getFileName(), is(equalTo(testFileName)));
 		assertThat(info.getCurrentFileName(), is(equalTo(testFileName)));
 		// try to close it to handle windows rename error
@@ -330,7 +330,7 @@ public class UniqueFileTestCase {
 		Thread.sleep(2000L);
 		info = file.getFileContentInfos(false).get(0);
 		assertThat(info, is(notNullValue()));
-		assertThat(info.getFileKey(), is(notNullValue()));
+		assertThat(info.fileKey(), is(notNullValue()));
 		assertThat(info.getFileName(), is(equalTo(testFileName)));
 		assertThat(info.getCurrentFileName(), is(equalTo(testFile2Name)));
 		file.close();
@@ -354,7 +354,7 @@ public class UniqueFileTestCase {
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		FileContentInfo info = file.getFileContentInfos(false).get(0);
 		assertThat(info, is(notNullValue()));
-		assertThat(info.getFileKey(), is(notNullValue()));
+		assertThat(info.fileKey(), is(notNullValue()));
 		assertThat(info.getFileName(), is(equalTo(testFileName)));
 		assertThat(info.getCurrentFileName(), is(equalTo(testFileName)));
 		// try to close it to simulate file rotation delete
@@ -364,7 +364,7 @@ public class UniqueFileTestCase {
 		assertThat(line, is(nullValue()));
 		info = file.getFileContentInfos(true).get(0);
 		assertThat(info, is(notNullValue()));
-		assertThat(info.getFileKey(), is(notNullValue()));
+		assertThat(info.fileKey(), is(notNullValue()));
 		assertThat(info.getFileName(), is(equalTo(testFileName)));
 		assertThat(info.getCurrentFileName(), is(nullValue()));
 		assertThat(info.getLastModified(), is(equalTo(0L)));

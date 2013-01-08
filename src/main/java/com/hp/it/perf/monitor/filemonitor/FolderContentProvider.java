@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -18,7 +19,8 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class FolderContentProvider implements FileContentProvider {
+public class FolderContentProvider extends ManagedFileContentProvider implements
+		FileContentProvider, FolderContentProviderMXBean {
 
 	private File folder;
 
@@ -103,7 +105,7 @@ public class FolderContentProvider implements FileContentProvider {
 			if (len == 1) {
 				LineRecord line = container.poll();
 				lastUpdateFiles.offer(file);
-				return line;
+				return onLineRead(line);
 			} else if (len == EOF) {
 				// EOF of file (maybe file is deleted)
 				file = null;
@@ -156,7 +158,7 @@ public class FolderContentProvider implements FileContentProvider {
 			if (len == 1) {
 				LineRecord line = container.poll();
 				lastUpdateFiles.offer(file);
-				return line;
+				return onLineRead(line);
 			} else if (len == EOF) {
 				// TODO EOF of file
 				// TODO no moniotr return null?
@@ -181,6 +183,8 @@ public class FolderContentProvider implements FileContentProvider {
 			throws IOException {
 		int totalLen = 0;
 		FileContentProvider file = null;
+		RecordedQueue<LineRecord> recordedQueue = new RecordedQueue<LineRecord>(
+				list);
 		while (maxSize > 0) {
 			if (file == null) {
 				file = lastUpdateFiles.poll();
@@ -200,13 +204,18 @@ public class FolderContentProvider implements FileContentProvider {
 			}
 			// reset version
 			// TODO concurrent issue
-			int len = file.readLines(list, maxSize);
+			int len = file.readLines(recordedQueue, maxSize);
 			if (len == EOF) {
 				// TODO EOF of file
+				log.debug("file is reaching EOF: {}", file);
+				file = null;
 			} else if (len == QUEUE_FULL) {
 				// queue is full
 				// file not loaded finished
 				lastUpdateFiles.offer(file);
+				for (LineRecord line : recordedQueue.getRecorded()) {
+					onLineRead(line);
+				}
 				return QUEUE_FULL;
 			} else if (len > 0) {
 				totalLen += len;
@@ -219,6 +228,9 @@ public class FolderContentProvider implements FileContentProvider {
 				// no data loaded
 				file = null;
 			}
+		}
+		for (LineRecord line : recordedQueue.getRecorded()) {
+			onLineRead(line);
 		}
 		return totalLen;
 	}
@@ -285,6 +297,7 @@ public class FolderContentProvider implements FileContentProvider {
 						removedFile == null ? null : removedFile,
 						event.getChangedFileKey());
 				if (removedFile != null) {
+					onSubProviderRemoved(removedFile);
 					folderUpdateNotifier.onChanged(event);
 				}
 			}
@@ -359,6 +372,7 @@ public class FolderContentProvider implements FileContentProvider {
 				}
 			}
 		}
+		onSubProviderCreated(uniqueFile);
 		FileKey fileKey = uniqueFile.getUniqueKey();
 		files.put(fileKey, uniqueFile);
 		if (initOffset >= 0) {
@@ -373,6 +387,32 @@ public class FolderContentProvider implements FileContentProvider {
 	@Override
 	public String toString() {
 		return String.format("FolderContentProvider (folder=%s)", folder);
+	}
+
+	@Override
+	public String[] getFileNames() {
+		List<String> fileList = new ArrayList<String>(files.size());
+		for (FileContentProvider file : files.values()) {
+			if (file instanceof UniqueFile) {
+				fileList.add(((UniqueFile) file).getFileName());
+			}
+		}
+		return fileList.toArray(new String[fileList.size()]);
+	}
+
+	@Override
+	protected String getProviderName() {
+		return getFolder().getName();
+	}
+
+	@Override
+	protected Collection<FileContentProvider> providers() {
+		return files.values();
+	}
+
+	@Override
+	public String getFolderName() {
+		return getFolder().getName();
 	}
 
 }

@@ -3,9 +3,12 @@ package com.hp.it.perf.monitor.filemonitor.example;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.net.URLConnection;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.management.ObjectName;
 
 import com.hp.it.perf.monitor.filemonitor.CompositeContentProvider;
 import com.hp.it.perf.monitor.filemonitor.FileContentInfo;
@@ -36,11 +39,9 @@ public class FileMonitorMain {
 
 	/**
 	 * @param args
-	 * @throws IOException
-	 * @throws InterruptedException
+	 * @throws Exception
 	 */
-	public static void main(String[] args) throws IOException,
-			InterruptedException {
+	public static void main(String[] args) throws Exception {
 		if (args.length == 0) {
 			args = new String[] { "." };
 		}
@@ -72,6 +73,10 @@ public class FileMonitorMain {
 			}
 		}
 		suite.init();
+		ManagementFactory.getPlatformMBeanServer().registerMBean(
+				suite,
+				ObjectName.getInstance(CompositeContentProvider.DOMAIN, "name",
+						"compositeProvider"));
 		LineRecord line;
 		refreshFiles(suite);
 		if (monitor) {

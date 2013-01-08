@@ -16,10 +16,12 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 // This is not thread safe
 // Provider for one file with same i-node (file key)
 // low level provider for file created
-public class UniqueFile implements FileContentProvider {
+public class UniqueFile extends ManagedFileContentProvider implements
+		FileContentProvider, UniqueFileMXBean {
 
 	private static final Logger log = LoggerFactory.getLogger(UniqueFile.class);
 
@@ -185,7 +187,7 @@ public class UniqueFile implements FileContentProvider {
 					log.trace("notify by new change for file {}", file);
 				}
 			} else {
-				return wrapRecord(line, reader.getLoadedLineNumber());
+				return onLineRead(wrapRecord(line, reader.getLoadedLineNumber()));
 			}
 		}
 	}
@@ -229,7 +231,7 @@ public class UniqueFile implements FileContentProvider {
 					}
 				}
 			} else {
-				return wrapRecord(line, reader.getLoadedLineNumber());
+				return onLineRead(wrapRecord(line, reader.getLoadedLineNumber()));
 			}
 		}
 		// timeout
@@ -254,6 +256,7 @@ public class UniqueFile implements FileContentProvider {
 				} else {
 					maxSize--;
 					lines++;
+					onLineRead(record);
 				}
 			} else {
 				if (onlyEOF && changeKey == null) {
@@ -340,7 +343,8 @@ public class UniqueFile implements FileContentProvider {
 		reader.setKeepAlive(idleTimeout);
 		reader.open(initOffset, lazyOpen);
 		fileKey = FileMonitors.getKeyByFile(file);
-		log.trace("create random access file reader for file {} with key {}", file, fileKey);
+		log.trace("create random access file reader for file {} with key {}",
+				file, fileKey);
 		originalPath = file.getPath();
 		currentPath = originalPath;
 		if (monitorService != null) {
@@ -411,6 +415,16 @@ public class UniqueFile implements FileContentProvider {
 	@Override
 	public String toString() {
 		return String.format("UniqueFile (file=%s)", file);
+	}
+
+	@Override
+	protected String getProviderName() {
+		return file.getName();
+	}
+
+	@Override
+	public String getFileName() {
+		return getFile().getName();
 	}
 
 }
