@@ -254,4 +254,18 @@ class FileTeseBuilder implements Closeable {
 		closeableList.add(closeable);
 	}
 
+	public File simulateRename(File file, String newFileName)
+			throws IOException {
+		File newFile = new File(file.getParentFile(), newFileName);
+		if (newFile.exists()) {
+			delete(newFile);
+		}
+		copyFile(file, newFile);
+		delete(file);
+		log.trace("{} (simulate) rename to {}", file.getName(),
+				newFile.getName());
+		newFile.deleteOnExit();
+		return newFile;
+	}
+
 }

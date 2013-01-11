@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,8 @@ public class RandomAccessFileReader implements Closeable {
 	private static DelayQueue<TimeoutReaderReference> keepAliveQueue = new DelayQueue<TimeoutReaderReference>();
 
 	private TimeoutReaderReference timeoutReference;
+	
+	private volatile boolean fileNeedReopen = false;
 
 	static {
 		Thread keepAliveThread = new Thread(new Runnable() {
@@ -342,6 +345,10 @@ public class RandomAccessFileReader implements Closeable {
 		if (closed) {
 			throw new IOException("file is not open or closed");
 		}
+		if (fileNeedReopen) {
+			fileNeedReopen = false;
+			close0();
+		}
 		if (access == null) {
 			// lazy open or was off-line
 			try {
@@ -379,5 +386,6 @@ public class RandomAccessFileReader implements Closeable {
 
 	void changeFileName(File newName) {
 		this.file = newName;
+		fileNeedReopen = true;
 	}
 }

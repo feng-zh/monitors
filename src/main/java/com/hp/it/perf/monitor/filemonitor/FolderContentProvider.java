@@ -402,7 +402,7 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 
 	@Override
 	protected String getProviderName() {
-		return getFolder().getName();
+		return getFolder().getPath();
 	}
 
 	@Override

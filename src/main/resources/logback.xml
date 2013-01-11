@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
- 	<consolePlugin/>
 	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
 		encoders are assigned the type ch.qos.logback.classic.encoder.PatternLayoutEncoder 
 			by default
@@ -8,9 +7,9 @@
 			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{30} - %msg%n</pattern>
 		</encoder>
 	</appender>
-	<logger name="com.hp.it.perf.monitor.filemonitor" level="DEBUG"/>
-	<logger name="com.hp.it.perf.monitor.filemonitor.CompositeContentProvider" level="DEBUG"/>
-	<logger name="com.hp.it.perf.monitor.filemonitor.FolderContentProvider" level="DEBUG"/>
+	<logger name="com.hp.it.perf.monitor.filemonitor" level="TRACE"/>
+	<logger name="com.hp.it.perf.monitor.filemonitor.CompositeContentProvider" level="TRACE"/>
+	<logger name="com.hp.it.perf.monitor.filemonitor.FolderContentProvider" level="TRACE"/>
 	<root level="INFO">
 		<appender-ref ref="STDOUT" />
 	</root>

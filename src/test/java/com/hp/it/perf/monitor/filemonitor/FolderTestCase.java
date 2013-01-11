@@ -31,7 +31,7 @@ public class FolderTestCase {
 	public void setUp() throws Exception {
 		log.info("[Start Test]");
 		monitorService = new MultiMonitorService();
-		setup = new FileTeseBuilder(UniqueFileTestCase.class.getName());
+		setup = new FileTeseBuilder(FolderTestCase.class.getName());
 	}
 
 	@After

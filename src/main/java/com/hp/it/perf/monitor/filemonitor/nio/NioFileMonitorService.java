@@ -25,7 +25,6 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hp.it.perf.monitor.filemonitor.FileKey;
 import com.hp.it.perf.monitor.filemonitor.FileMonitorKey;
 import com.hp.it.perf.monitor.filemonitor.FileMonitorMode;
 import com.hp.it.perf.monitor.filemonitor.FileMonitorService;
@@ -37,7 +36,7 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 	private Map<WatchKey, WatchEntry> watchKeys = Collections
 			.synchronizedMap(new IdentityHashMap<WatchKey, WatchEntry>());
 
-	private ConcurrentMap<FileKey, WatchEntry> watchEntrys = new ConcurrentHashMap<FileKey, WatchEntry>();
+	private ConcurrentMap<Path, WatchEntry> watchEntrys = new ConcurrentHashMap<Path, WatchEntry>();
 
 	private String watchEntryName = "default";
 
@@ -48,7 +47,13 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 
 	private Semaphore startGuard = new Semaphore(0);
 
-	private PathKeyResolver pathKeyResolver = new PathKeyResolver((Path) null);
+	private FileKeyDetectorFactory keyDetectorFactory = new FileKeyDetectorFactory() {
+
+		@Override
+		public FileKeyDetector create(Path basePath) {
+			return new NativeFileKeyDetector(basePath);
+		}
+	};
 
 	public NioFileMonitorService() throws IOException {
 		watchService = FileSystems.getDefault().newWatchService();
@@ -62,6 +67,10 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 		init();
 		log.info("init nio monitor service on {} with watch {}",
 				watchEntryName, watchService.getClass());
+	}
+
+	public void setKeyDetectorFactory(FileKeyDetectorFactory keyDetectorFactory) {
+		this.keyDetectorFactory = keyDetectorFactory;
 	}
 
 	private void init() {
@@ -89,7 +98,7 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 		WatchEntry newWatchEntry = prepareWatchEntry(parentPath);
 		// find if related watch for the path is registered
 		WatchEntry watchEntry = watchEntrys.putIfAbsent(
-				newWatchEntry.getFileKey(), newWatchEntry);
+				newWatchEntry.getRealPath(), newWatchEntry);
 		if (watchEntry == null) {
 			watchEntry = newWatchEntry;
 		}
@@ -99,8 +108,7 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 	}
 
 	private WatchEntry prepareWatchEntry(Path path) throws IOException {
-		WatchEntry entry = new WatchEntry(path,
-				pathKeyResolver.resolvePathKey(path));
+		WatchEntry entry = new WatchEntry(path, keyDetectorFactory.create(path));
 		entry.setWatchService(watchService);
 		return entry;
 	}
@@ -115,7 +123,7 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 		WatchEntry newWatchEntry = prepareWatchEntry(path);
 		// find if related watch for the path is registered
 		WatchEntry watchEntry = watchEntrys.putIfAbsent(
-				newWatchEntry.getFileKey(), newWatchEntry);
+				newWatchEntry.getRealPath(), newWatchEntry);
 		if (watchEntry == null) {
 			watchEntry = newWatchEntry;
 		}
@@ -171,7 +179,7 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 	}
 
 	private void closeWatchEntry(WatchEntry watchEntry) {
-		watchEntrys.remove(watchEntry.getFileKey());
+		watchEntrys.remove(watchEntry.getRealPath());
 		watchKeys.remove(watchEntry.getWatchKey());
 		watchEntry.close();
 	}

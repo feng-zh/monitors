@@ -66,6 +66,16 @@ public class MultiMonitorService implements FileMonitorService {
 		if (monitorService == null) {
 			monitorService = new NioFileMonitorService(store.name(),
 					createWatchService(store));
+			if ("fuse".equals(store.type())) {
+				((NioFileMonitorService) monitorService)
+						.setKeyDetectorFactory(new FileKeyDetectorFactory() {
+
+							@Override
+							public FileKeyDetector create(Path basePath) {
+								return new ContentBasedFileKeyDetector(basePath);
+							}
+						});
+			}
 			storeMonitors.put(store, monitorService);
 		}
 		return monitorService;
