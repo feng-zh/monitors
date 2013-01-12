@@ -8,13 +8,11 @@ import java.net.InetAddress;
 import java.net.URLConnection;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
 
 import javax.management.ObjectName;
-import javax.management.remote.JMXConnectorServer;
 import javax.management.remote.JMXConnectorServerFactory;
 import javax.management.remote.JMXServiceURL;
 
@@ -123,7 +121,7 @@ public class FileMonitorMain {
 		String theHost = InetAddress.getLocalHost().getHostName();
 		int port = Integer.getInteger("monitor.rmi.port", 12099);
 		try {
-			Registry registry = LocateRegistry.getRegistry(port);
+			LocateRegistry.getRegistry(port);
 		} catch (RemoteException e) {
 			LocateRegistry.createRegistry(port);
 		}

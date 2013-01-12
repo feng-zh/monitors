@@ -86,7 +86,7 @@ public class SshfsTestCase {
 		folder.close();
 	}
 
-	@Test(timeout = 6000)
+	@Test (timeout = 6000)
 	public void testFileRenameRotate() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
 		helper.registerClosable(folder);
@@ -138,6 +138,56 @@ public class SshfsTestCase {
 		line = folder.readLine();
 		assertThat(line, is(notNullValue()));
 		assertThat(line.getLine(), is(helper.line("line3")));
+		assertThat(line.getLineNum(), is(equalTo(1)));
+		infos = folder.getFileContentInfos(false);
+		assertThat(infos.size(), is(equalTo(2)));
+		assertThat(infos.get(testFile1Index).getCurrentFileName(),
+				is(equalTo(testFile1x.getPath())));
+		assertThat(infos.get(testFile2Index).getCurrentFileName(),
+				is(equalTo(testFile2x.getPath())));
+		folder.close();
+	}
+	
+	@Test
+	public void testFileModifyRenameRotate() throws Exception {
+		FolderContentProvider folder = new FolderContentProvider();
+		helper.registerClosable(folder);
+		File testFile1 = helper.copy(new File("src/test/data/sample_file1.txt"));
+		File testFile2 = helper.copy(new File("src/test/data/sample_file2.txt"));
+		folder.setMonitorService(monitorService);
+		folder.setFolder(testFile1.getParentFile());
+		folder.setTailMode(true);
+		folder.init();
+		helper.echo("line1", testFile1);
+		LineRecord line = folder.readLine();
+		assertThat(line, is(notNullValue()));
+		assertThat(line.getLine(), is(helper.line("line1")));
+		assertThat(line.getLineNum(), is(equalTo(1)));
+		// prepare file content info
+		List<FileContentInfo> infos = folder.getFileContentInfos(false);
+		assertThat(infos.size(), is(equalTo(2)));
+		int testFile1Index, testFile2Index;
+		if (infos.get(0).getFileName().equals(testFile1.getPath())) {
+			testFile1Index = 0;
+			testFile2Index = 1;
+		} else {
+			testFile1Index = 1;
+			testFile2Index = 0;
+		}
+		assertThat(infos.get(testFile1Index).getCurrentFileName(),
+				is(equalTo(testFile1.getPath())));
+		assertThat(infos.get(testFile2Index).getCurrentFileName(),
+				is(equalTo(testFile2.getPath())));
+		// quick modify
+		helper.echo("line2", testFile2);
+		// start rename rotate
+		File testFile2x = helper.simulateRename(testFile2, "sample_file3.txt");
+		File testFile1x = helper.simulateRename(testFile1, "sample_file2.txt");
+		Thread.sleep(2500L);
+		// force wait for file watch
+		line = folder.readLine();
+		assertThat(line, is(notNullValue()));
+		assertThat(line.getLine(), is(helper.line("line2")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		infos = folder.getFileContentInfos(false);
 		assertThat(infos.size(), is(equalTo(2)));

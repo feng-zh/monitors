@@ -1,5 +1,6 @@
 package com.hp.it.perf.monitor.filemonitor.nio;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
@@ -27,6 +28,36 @@ public class ContentBasedFileKeyDetector implements FileKeyDetector {
 	private Path watchPath;
 
 	private Map<Path, FileInfoEntry> cachedEntries = new HashMap<Path, FileInfoEntry>();
+
+	private FileRenameProposal renameProposal = new FileRenameProposal() {
+
+		@Override
+		public boolean isRenamed(File fromFile, long fromModified,
+				long fromLength, File toFile, long toModified, long toLength) {
+			if (fromModified == toModified && fromLength == toLength) {
+				return true;
+			}
+			if (fromModified <= toModified && fromLength <= toLength) {
+				// maybe renamed during this period
+				String fromName = fromFile.getName();
+				String toName = toFile.getName();
+				// check names have same prefix (usually in log file rotation)
+				int i = 0;
+				for (int n = Math.min(fromName.length(), toName.length()); i < n; i++) {
+					if (fromName.charAt(i) != toName.charAt(i)) {
+						break;
+					}
+				}
+				if (i > 0) {
+					return true;
+				} else {
+					return false;
+				}
+			} else {
+				return false;
+			}
+		}
+	};
 
 	private static class ContentSignature {
 		private byte[] signature;
@@ -108,7 +139,7 @@ public class ContentBasedFileKeyDetector implements FileKeyDetector {
 
 	}
 
-	static class FileInfoEntry {
+	private class FileInfoEntry {
 		private long modified;
 		private long length;
 		private long lastUpdated;
@@ -169,18 +200,15 @@ public class ContentBasedFileKeyDetector implements FileKeyDetector {
 			}
 		}
 
-		long getModified() {
-			return modified;
-		}
-
 		public boolean equals(Object obj) {
 			if (!(obj instanceof FileInfoEntry)) {
 				return false;
 			}
-			ContentSignature otherHeadSignature = ((FileInfoEntry) obj).headSignature;
+			FileInfoEntry other = (FileInfoEntry) obj;
+			ContentSignature otherHeadSignature = other.headSignature;
 			if (headSignature == null || otherHeadSignature == null) {
 				// try native file key
-				return nativeKey.equals(((FileInfoEntry) obj).nativeKey);
+				return nativeKey.equals(other.nativeKey);
 			} else {
 				if (headSignature.equals(otherHeadSignature)) {
 					return true;
@@ -192,10 +220,45 @@ public class ContentBasedFileKeyDetector implements FileKeyDetector {
 			}
 		}
 
+		boolean equalToHistory(FileInfoEntry history) {
+			if (nativeKey.equals(history.nativeKey)) {
+				// native key matches
+				loadSignature(history);
+				return true;
+			}
+			if (headSignature == null) {
+				if (history.headSignature == null) {
+					if (renameProposal.isRenamed(history.name.toFile(),
+							history.modified, history.length, name.toFile(),
+							modified, length)) {
+						loadSignature();
+						return true;
+					}
+				} else {
+					loadSignature();
+					return equals(history);
+				}
+			}
+			loadSignature();
+			if (equals(history)) {
+				return true;
+			} else if (history.headSignature == null) {
+				return renameProposal.isRenamed(history.name.toFile(),
+						history.modified, history.length, name.toFile(),
+						modified, length);
+			} else {
+				return false;
+			}
+		}
+
 	}
 
 	public ContentBasedFileKeyDetector(Path watchPath) {
 		this.watchPath = watchPath;
+	}
+
+	public void setFileRenameProposal(FileRenameProposal renameProposal) {
+		this.renameProposal = renameProposal;
 	}
 
 	@Override
@@ -209,12 +272,7 @@ public class ContentBasedFileKeyDetector implements FileKeyDetector {
 			FileInfoEntry fileInfo = new FileInfoEntry(path);
 			fileInfo.setFileAttributes();
 			if (addToCache) {
-				FileInfoEntry previousInfo = cachedEntries.put(path, fileInfo);
-				if (previousInfo != null) {
-					fileInfo.loadSignature(previousInfo);
-				} else {
-					fileInfo.loadSignature();
-				}
+				cachedEntries.put(path, fileInfo);
 			}
 			return fileInfo;
 		} catch (IOException e) {
@@ -272,7 +330,8 @@ public class ContentBasedFileKeyDetector implements FileKeyDetector {
 				FileInfoEntry historyInfoEntry = historyEntries[i];
 				FileKey currentNativeKey = toNativeFileKey(currentInfoEntry);
 				FileKey historyNativeKey = toNativeFileKey(historyInfoEntry);
-				int existIndex = findSameFile(currentEntries, historyInfoEntry);
+				int existIndex = findSameCurrentFile(currentEntries,
+						historyInfoEntry);
 				if (eventKind == StandardWatchEventKinds.ENTRY_DELETE) {
 					// check if file real deleted or renamed
 					if (historyInfoEntry == null || existIndex < 0) {
@@ -318,8 +377,8 @@ public class ContentBasedFileKeyDetector implements FileKeyDetector {
 														event),
 												historyNativeKey, null));
 							}
-							int previousIndex = findSameFile(historyEntries,
-									currentInfoEntry);
+							int previousIndex = findSameHistoryFile(
+									historyEntries, currentInfoEntry);
 							if (previousIndex >= 0) {
 								// and some renamed to this
 								processedEvents
@@ -346,7 +405,7 @@ public class ContentBasedFileKeyDetector implements FileKeyDetector {
 						processedEvents.add(new WatchEventKeys(event,
 								historyNativeKey, currentNativeKey));
 					} else {
-						int previous = findSameFile(historyEntries,
+						int previous = findSameHistoryFile(historyEntries,
 								currentInfoEntry);
 						if (previous >= 0) {
 							// previous exists
@@ -371,15 +430,29 @@ public class ContentBasedFileKeyDetector implements FileKeyDetector {
 		return infoEntry != null ? infoEntry.nativeKey : null;
 	}
 
-	protected int findSameFile(FileInfoEntry[] entries, FileInfoEntry checkEntry) {
-		if (checkEntry == null) {
+	protected int findSameHistoryFile(FileInfoEntry[] historyEntries,
+			FileInfoEntry checkCurrent) {
+		if (checkCurrent == null) {
 			return -1;
 		}
-		checkEntry.loadSignature();
-		for (int i = 0; i < entries.length; i++) {
-			if (entries[i] != null) {
-				entries[i].loadSignature();
-				if (checkEntry.equals(entries[i])) {
+		for (int i = 0; i < historyEntries.length; i++) {
+			if (historyEntries[i] != null) {
+				if (checkCurrent.equalToHistory(historyEntries[i])) {
+					return i;
+				}
+			}
+		}
+		return -1;
+	}
+
+	protected int findSameCurrentFile(FileInfoEntry[] currentEntries,
+			FileInfoEntry checkHistory) {
+		if (checkHistory == null) {
+			return -1;
+		}
+		for (int i = 0; i < currentEntries.length; i++) {
+			if (currentEntries[i] != null) {
+				if (currentEntries[i].equalToHistory(checkHistory)) {
 					return i;
 				}
 			}
