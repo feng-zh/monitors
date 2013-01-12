@@ -4,11 +4,19 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.net.InetAddress;
 import java.net.URLConnection;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Map;
 
 import javax.management.ObjectName;
+import javax.management.remote.JMXConnectorServer;
+import javax.management.remote.JMXConnectorServerFactory;
+import javax.management.remote.JMXServiceURL;
 
 import com.hp.it.perf.monitor.filemonitor.CompositeContentProvider;
 import com.hp.it.perf.monitor.filemonitor.FileContentInfo;
@@ -77,6 +85,8 @@ public class FileMonitorMain {
 				suite,
 				ObjectName.getInstance(CompositeContentProvider.DOMAIN, "name",
 						"compositeProvider"));
+		// setup remote mbean server
+		setupJMXConnectorServer();
 		LineRecord line;
 		refreshFiles(suite);
 		if (monitor) {
@@ -107,6 +117,25 @@ public class FileMonitorMain {
 			}
 		}
 		suite.close();
+	}
+
+	private static void setupJMXConnectorServer() throws IOException {
+		String theHost = InetAddress.getLocalHost().getHostName();
+		int port = Integer.getInteger("monitor.rmi.port", 12099);
+		try {
+			Registry registry = LocateRegistry.getRegistry(port);
+		} catch (RemoteException e) {
+			LocateRegistry.createRegistry(port);
+		}
+		String theLocation = System.getProperty("monitor.jmx.location",
+				"filemonitor");
+		String serviceURL = "service:jmx:rmi://" + theHost + ":" + port
+				+ "/jndi/rmi://" + theHost + ":" + port + "/" + theLocation;
+		System.out.printf("Target JMX Service URL is %s%n", serviceURL);
+		Map<String, String> environment = new Hashtable<String, String>();
+		JMXConnectorServerFactory.newJMXConnectorServer(new JMXServiceURL(
+				serviceURL), environment, ManagementFactory
+				.getPlatformMBeanServer());
 	}
 
 	private static void refreshFiles(FileContentProvider suite)
