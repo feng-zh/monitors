@@ -260,4 +260,8 @@ class FileTeseBuilder implements Closeable {
 		return newFile;
 	}
 
+	public void setModifiedBefore(File file, int before, TimeUnit unit) {
+		long now = System.currentTimeMillis();
+		file.setLastModified(now - unit.toMillis(before));
+	}
 }

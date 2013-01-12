@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Observer;
@@ -24,7 +25,7 @@ public class CompositeContentProvider extends ManagedFileContentProvider
 
 	private List<FileContentProvider> providers = new ArrayList<FileContentProvider>();
 
-	private Queue<FileContentProvider> lastUpdates = new LinkedList<FileContentProvider>();
+	private Deque<FileContentProvider> lastUpdates = new LinkedList<FileContentProvider>();
 
 	protected ContentUpdateObservable externalUpdater = new ContentUpdateObservable(
 			this);
@@ -62,7 +63,7 @@ public class CompositeContentProvider extends ManagedFileContentProvider
 			log.trace("read line count {}", len);
 			if (len == 1) {
 				LineRecord line = container.poll();
-				lastUpdates.offer(updated);
+				lastUpdates.offerFirst(updated);
 				onLineRead(line);
 				return line;
 			} else if (len == -1) {
@@ -102,7 +103,7 @@ public class CompositeContentProvider extends ManagedFileContentProvider
 			int len = updated.readLines(container, 1);
 			if (len == 1) {
 				LineRecord line = container.poll();
-				lastUpdates.offer(updated);
+				lastUpdates.offerFirst(updated);
 				onLineRead(line);
 				return line;
 			} else if (len == -1) {
@@ -151,7 +152,7 @@ public class CompositeContentProvider extends ManagedFileContentProvider
 			} else if (len == QUEUE_FULL) {
 				// queue is full
 				// file not loaded finished
-				lastUpdates.offer(updated);
+				lastUpdates.offerFirst(updated);
 				for (LineRecord line : recordedQueue.getRecorded()) {
 					onLineRead(line);
 				}
@@ -161,7 +162,7 @@ public class CompositeContentProvider extends ManagedFileContentProvider
 				maxSize -= len;
 				if (maxSize <= 0) {
 					// still not finished
-					lastUpdates.offer(updated);
+					lastUpdates.offerFirst(updated);
 				}
 			} else {
 				// no data loaded

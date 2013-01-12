@@ -5,7 +5,9 @@ import static org.hamcrest.Matchers.*;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
 import org.junit.Before;
@@ -54,7 +56,8 @@ public class SshfsTestCase {
 	public void testFileRename() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
 		helper.registerClosable(folder);
-		File testFile1 = helper.copy(new File("src/test/data/sample_file1.txt"));
+		File testFile1 = helper
+				.copy(new File("src/test/data/sample_file1.txt"));
 		folder.setMonitorService(monitorService);
 		folder.setFolder(testFile1.getParentFile());
 		folder.setTailMode(true);
@@ -86,12 +89,14 @@ public class SshfsTestCase {
 		folder.close();
 	}
 
-	@Test (timeout = 6000)
+	@Test(timeout = 6000)
 	public void testFileRenameRotate() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
 		helper.registerClosable(folder);
-		File testFile1 = helper.copy(new File("src/test/data/sample_file1.txt"));
-		File testFile2 = helper.copy(new File("src/test/data/sample_file2.txt"));
+		File testFile1 = helper
+				.copy(new File("src/test/data/sample_file1.txt"));
+		File testFile2 = helper
+				.copy(new File("src/test/data/sample_file2.txt"));
 		folder.setMonitorService(monitorService);
 		folder.setFolder(testFile1.getParentFile());
 		folder.setTailMode(true);
@@ -147,13 +152,61 @@ public class SshfsTestCase {
 				is(equalTo(testFile2x.getPath())));
 		folder.close();
 	}
-	
+
 	@Test
+	public void testFileMoreRenameRotate() throws Exception {
+		// System.setProperty("monitor.nio.slow", "true");
+		FolderContentProvider folder = new FolderContentProvider();
+		helper.registerClosable(folder);
+		File testFile1 = helper.copy(
+				new File("src/test/data/sample_file1.txt"), "business.log");
+		helper.setModifiedBefore(testFile1, 1, TimeUnit.MINUTES);
+		File testFile2 = helper.copy(
+				new File("src/test/data/sample_file2.txt"), "business.log.1");
+		helper.setModifiedBefore(testFile2, 15, TimeUnit.MINUTES);
+		File testFile3 = helper.copy(
+				new File("src/test/data/sample_file3.txt"), "business.log.2");
+		helper.setModifiedBefore(testFile3, 45, TimeUnit.MINUTES);
+		folder.setMonitorService(monitorService);
+		folder.setFolder(testFile1.getParentFile());
+		folder.setTailMode(true);
+		folder.init();
+		helper.echo("line1", testFile1);
+		LineRecord line = folder.readLine();
+		assertThat(line, is(notNullValue()));
+		assertThat(line.getLine(), is(helper.line("line1")));
+		assertThat(line.getLineNum(), is(equalTo(1)));
+		// prepare file content info
+		List<FileContentInfo> infos = folder.getFileContentInfos(false);
+		assertThat(infos.size(), is(equalTo(3)));
+		// start modify rename rotate
+		helper.echo("line2", testFile1);
+		helper.delete(testFile3);
+		helper.simulateRename(testFile2, "business.log.2");
+		helper.simulateRename(testFile1, "business.log.1");
+		helper.echo("line3", testFile1);
+		helper.echo("line4", testFile1);
+		// force wait for file watch
+		for (int i = 0; i < 3; i++) {
+			line = folder.readLine();
+			assertThat(line, is(notNullValue()));
+			assertThat(new String(line.getLine()), startsWith("line"));
+		}
+		int len = folder.readLines(new LinkedList<LineRecord>(), 10);
+		infos = folder.getFileContentInfos(false);
+		assertThat(infos.size(), is(equalTo(3)));
+		assertThat(len, is(equalTo(0)));
+		folder.close();
+	}
+
+	@Test(timeout = 6000)
 	public void testFileModifyRenameRotate() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
 		helper.registerClosable(folder);
-		File testFile1 = helper.copy(new File("src/test/data/sample_file1.txt"));
-		File testFile2 = helper.copy(new File("src/test/data/sample_file2.txt"));
+		File testFile1 = helper
+				.copy(new File("src/test/data/sample_file1.txt"));
+		File testFile2 = helper
+				.copy(new File("src/test/data/sample_file2.txt"));
 		folder.setMonitorService(monitorService);
 		folder.setFolder(testFile1.getParentFile());
 		folder.setTailMode(true);
@@ -197,12 +250,13 @@ public class SshfsTestCase {
 				is(equalTo(testFile2x.getPath())));
 		folder.close();
 	}
-	
+
 	@Test(timeout = 6000)
 	public void testFileSingleRotate() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
 		helper.registerClosable(folder);
-		File testFile1 = helper.copy(new File("src/test/data/sample_file1.txt"));
+		File testFile1 = helper
+				.copy(new File("src/test/data/sample_file1.txt"));
 		folder.setMonitorService(monitorService);
 		folder.setFolder(testFile1.getParentFile());
 		folder.setTailMode(true);
@@ -215,7 +269,7 @@ public class SshfsTestCase {
 		// prepare file content info
 		List<FileContentInfo> infos = folder.getFileContentInfos(false);
 		assertThat(infos.size(), is(equalTo(1)));
-		int testFile1Index =0 ;
+		int testFile1Index = 0;
 		assertThat(infos.get(testFile1Index).getCurrentFileName(),
 				is(equalTo(testFile1.getPath())));
 		// start rename rotate, and create new one
@@ -247,13 +301,15 @@ public class SshfsTestCase {
 		assertThat(infos.size(), is(equalTo(2)));
 		folder.close();
 	}
-	
+
 	@Test(timeout = 6000)
 	public void testFileFixedRotate() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
 		helper.registerClosable(folder);
-		File testFile1 = helper.copy(new File("src/test/data/sample_file1.txt"));
-		File testFile2 = helper.copy(new File("src/test/data/sample_file2.txt"));
+		File testFile1 = helper
+				.copy(new File("src/test/data/sample_file1.txt"));
+		File testFile2 = helper
+				.copy(new File("src/test/data/sample_file2.txt"));
 		folder.setMonitorService(monitorService);
 		folder.setFolder(testFile1.getParentFile());
 		folder.setTailMode(true);
@@ -300,13 +356,15 @@ public class SshfsTestCase {
 		assertThat(infos.size(), is(equalTo(2)));
 		folder.close();
 	}
-	
+
 	@Test(timeout = 6000)
 	public void testFileMoveOverride() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
 		helper.registerClosable(folder);
-		File testFile1 = helper.copy(new File("src/test/data/sample_file1.txt"));
-		File testFile2 = helper.copy(new File("src/test/data/sample_file2.txt"));
+		File testFile1 = helper
+				.copy(new File("src/test/data/sample_file1.txt"));
+		File testFile2 = helper
+				.copy(new File("src/test/data/sample_file2.txt"));
 		folder.setMonitorService(monitorService);
 		folder.setFolder(testFile1.getParentFile());
 		folder.setTailMode(true);

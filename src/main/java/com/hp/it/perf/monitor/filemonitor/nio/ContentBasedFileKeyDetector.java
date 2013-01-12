@@ -80,7 +80,7 @@ public class ContentBasedFileKeyDetector implements FileKeyDetector {
 					index += size;
 				}
 				length = index;
-				log.trace(
+				log.debug(
 						"load file '{}' from offset {} with first {} bytes for signature",
 						new Object[] { name, offset, length });
 			} catch (IOException e) {

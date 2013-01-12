@@ -6,7 +6,7 @@ import java.io.FileFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +14,7 @@ import java.util.Observer;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -31,9 +32,9 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 	private ContentUpdateObservable folderUpdateNotifier = new ContentUpdateObservable(
 			this);
 
-	private Map<FileKey, FileContentProvider> files = new HashMap<FileKey, FileContentProvider>();
+	private Map<FileKey, FileContentProvider> files = new ConcurrentHashMap<FileKey, FileContentProvider>();
 
-	private Queue<FileContentProvider> lastUpdateFiles = new LinkedList<FileContentProvider>();
+	private Deque<FileContentProvider> lastUpdateFiles = new LinkedList<FileContentProvider>();
 
 	private FileMonitorService monitorService;
 
@@ -104,7 +105,7 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 			log.trace("read line count {}", len);
 			if (len == 1) {
 				LineRecord line = container.poll();
-				lastUpdateFiles.offer(file);
+				lastUpdateFiles.offerFirst(file);
 				return onLineRead(line);
 			} else if (len == EOF) {
 				// EOF of file (maybe file is deleted)
@@ -157,7 +158,7 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 			int len = file.readLines(container, 1);
 			if (len == 1) {
 				LineRecord line = container.poll();
-				lastUpdateFiles.offer(file);
+				lastUpdateFiles.offerFirst(file);
 				return onLineRead(line);
 			} else if (len == EOF) {
 				// TODO EOF of file
@@ -212,7 +213,7 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 			} else if (len == QUEUE_FULL) {
 				// queue is full
 				// file not loaded finished
-				lastUpdateFiles.offer(file);
+				lastUpdateFiles.offerFirst(file);
 				for (LineRecord line : recordedQueue.getRecorded()) {
 					onLineRead(line);
 				}
@@ -222,7 +223,7 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 				maxSize -= len;
 				if (maxSize <= 0) {
 					// still not finished
-					lastUpdateFiles.offer(file);
+					lastUpdateFiles.offerFirst(file);
 				}
 			} else {
 				// no data loaded

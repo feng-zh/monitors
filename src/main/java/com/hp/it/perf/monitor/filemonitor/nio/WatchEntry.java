@@ -52,6 +52,8 @@ class WatchEntry {
 
 	private AtomicLong folderTick;
 
+	private boolean slowSensitivity = Boolean.getBoolean("monitor.nio.slow");
+
 	private static interface FileMonitorConverter {
 
 		public FileMonitorEvent convert(WatchEvent<?> event,
@@ -190,16 +192,15 @@ class WatchEntry {
 				// prepare file key
 				FileMonitorEvent monitorEvent = converter.convert(
 						eventKeys.event, eventKeys.currentFileKey);
-				log.trace(
-						"{} on '{}' match {}({})? {}",
-						new Object[] {
-								event.kind(),
-								event.context(),
-								monitorKey.getMonitorMode(),
-								monitorKey.getMonitorPath() == null ? watchPath
-										: monitorKey.getMonitorPath(),
-								monitorEvent != null });
 				if (monitorEvent != null) {
+					log.trace(
+							"{} on '{}' match {}({})",
+							new Object[] {
+									event.kind(),
+									event.context(),
+									monitorKey.getMonitorMode(),
+									monitorKey.getMonitorPath() == null ? watchPath
+											: monitorKey.getMonitorPath() });
 					monitorEvents.add(monitorEvent);
 				}
 			}
@@ -297,7 +298,8 @@ class WatchEntry {
 					StandardWatchEventKinds.ENTRY_CREATE,
 					StandardWatchEventKinds.ENTRY_MODIFY,
 					StandardWatchEventKinds.ENTRY_DELETE },
-					SensitivityWatchEventModifier.HIGH);
+					slowSensitivity ? SensitivityWatchEventModifier.MEDIUM
+							: SensitivityWatchEventModifier.HIGH);
 			log.debug(
 					"register nio watch service on path {} with create/modify/delete kinds",
 					watchPath);
