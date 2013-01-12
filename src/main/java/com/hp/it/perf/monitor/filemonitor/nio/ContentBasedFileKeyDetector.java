@@ -14,15 +14,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.hp.it.perf.monitor.filemonitor.FileKey;
 
 public class ContentBasedFileKeyDetector implements FileKeyDetector {
 
+	private static final Logger log = LoggerFactory
+			.getLogger(ContentBasedFileKeyDetector.class);
+
 	private Path watchPath;
 
 	private Map<Path, FileInfoEntry> cachedEntries = new HashMap<Path, FileInfoEntry>();
-
-	private Map<FileKey, FileKey> keysMapping = new HashMap<FileKey, FileKey>();
 
 	private static class ContentSignature {
 		private byte[] signature;
@@ -45,6 +49,9 @@ public class ContentBasedFileKeyDetector implements FileKeyDetector {
 					index += size;
 				}
 				length = index;
+				log.trace(
+						"load file '{}' from offset {} with first {} bytes for signature",
+						new Object[] { name, offset, length });
 			} catch (IOException e) {
 				length = -1;
 			} finally {
@@ -101,7 +108,7 @@ public class ContentBasedFileKeyDetector implements FileKeyDetector {
 
 	}
 
-	private static class FileInfoEntry {
+	static class FileInfoEntry {
 		private long modified;
 		private long length;
 		private long lastUpdated;
@@ -162,6 +169,10 @@ public class ContentBasedFileKeyDetector implements FileKeyDetector {
 			}
 		}
 
+		long getModified() {
+			return modified;
+		}
+
 		public boolean equals(Object obj) {
 			if (!(obj instanceof FileInfoEntry)) {
 				return false;
@@ -198,7 +209,12 @@ public class ContentBasedFileKeyDetector implements FileKeyDetector {
 			FileInfoEntry fileInfo = new FileInfoEntry(path);
 			fileInfo.setFileAttributes();
 			if (addToCache) {
-				cachedEntries.put(path, fileInfo);
+				FileInfoEntry previousInfo = cachedEntries.put(path, fileInfo);
+				if (previousInfo != null) {
+					fileInfo.loadSignature(previousInfo);
+				} else {
+					fileInfo.loadSignature();
+				}
 			}
 			return fileInfo;
 		} catch (IOException e) {
@@ -208,8 +224,7 @@ public class ContentBasedFileKeyDetector implements FileKeyDetector {
 
 	// Handle following special cases
 	// Poll Mode: Delete, Create (1 => 2)/Rename
-	// Poll Mode: Delete, Modify, Create (1,2 => 2',3)/Pair rename???
-	// 1(A)->d-FA, 2(B)/2'(A)->m-FA, 3(B)->c-FB
+	// Poll Mode: Delete, Modify, Create (1,2 => 2',3)/Pair rename
 	// Poll Mode: Modify, Create (1 => 1', 2)/Single Rotate
 	// Poll Mode: Modify, Modify (1,2 => 1',2')/Rotate
 	// Poll Mode: Delete, Modify (1,2 => 2')/Move

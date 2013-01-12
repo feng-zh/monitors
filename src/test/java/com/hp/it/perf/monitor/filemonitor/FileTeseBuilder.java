@@ -7,7 +7,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -37,9 +36,8 @@ class FileTeseBuilder implements Closeable {
 
 	public FileTeseBuilder(String root) {
 		String prefix = "/tmp/filemonitor/";
-		targetRootFolder = new File(prefix + "target/test-data/" + root);
-		targetDeleteFolder = new File(prefix + "target/test-for-removed/"
-				+ root);
+		targetRootFolder = new File(prefix + "test/data/" + root);
+		targetDeleteFolder = new File(prefix + "test/for-removed/" + root);
 		deleteFiles(targetRootFolder);
 		deleteFiles(targetDeleteFolder);
 		targetRootFolder.deleteOnExit();
@@ -210,12 +208,6 @@ class FileTeseBuilder implements Closeable {
 			}
 			System.out.println();
 		}
-	}
-
-	public String getRelativeFileName(File file) {
-		Path rootPath = targetRootFolder.toPath();
-		Path filePath = file.toPath();
-		return rootPath.relativize(filePath).toString();
 	}
 
 	public File rename(File file, String newFileName) {

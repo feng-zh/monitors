@@ -10,7 +10,6 @@ import java.util.Arrays;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +41,7 @@ public class RandomAccessFileReader implements Closeable {
 
 	private TimeoutReaderReference timeoutReference;
 	
-	private volatile boolean fileNeedReopen = false;
+	private volatile File previousFile = null;
 
 	static {
 		Thread keepAliveThread = new Thread(new Runnable() {
@@ -219,7 +218,7 @@ public class RandomAccessFileReader implements Closeable {
 			log.trace("offline reader: {}", file);
 			// off access reader
 			try {
-				close0();
+				close0(file);
 			} catch (IOException e) {
 				log.warn("close access file got error: {}", e.toString());
 			}
@@ -271,10 +270,10 @@ public class RandomAccessFileReader implements Closeable {
 		closed = true;
 		keepAliveQueue.remove(timeoutReference);
 		timeoutReference = null;
-		close0();
+		close0(file);
 	}
 
-	private void close0() throws IOException {
+	private void close0(File fileName) throws IOException {
 		RandomAccessFile accessFile = access;
 		access = null;
 		if (accessFile != null) {
@@ -283,7 +282,7 @@ public class RandomAccessFileReader implements Closeable {
 			lineBuf.delete(0, lineBuf.count);
 			// close access
 			accessFile.close();
-			log.debug("close random access file {} at offset {}", file,
+			log.debug("close random access file {} at offset {}", fileName,
 					position);
 		}
 	}
@@ -345,9 +344,11 @@ public class RandomAccessFileReader implements Closeable {
 		if (closed) {
 			throw new IOException("file is not open or closed");
 		}
-		if (fileNeedReopen) {
-			fileNeedReopen = false;
-			close0();
+		if (previousFile!=null) {
+			File oldName = previousFile;
+			previousFile = null;
+			log.debug("try to reopen renamed file ({} -> {})", oldName, file);
+			close0(oldName);
 		}
 		if (access == null) {
 			// lazy open or was off-line
@@ -385,7 +386,8 @@ public class RandomAccessFileReader implements Closeable {
 	}
 
 	void changeFileName(File newName) {
+		File oldName = this.file;
 		this.file = newName;
-		fileNeedReopen = true;
+		previousFile = oldName;
 	}
 }

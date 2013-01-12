@@ -27,37 +27,37 @@ public class UniqueFileTestCase {
 			.getLogger(UniqueFileTestCase.class);
 
 	private FileMonitorService monitorService;
-	private FileTeseBuilder setup;
+	private FileTeseBuilder helper;
 
 	@Before
 	public void setUp() throws Exception {
 		log.info("[Start Test]");
 		monitorService = new MultiMonitorService();
-		setup = new FileTeseBuilder(UniqueFileTestCase.class.getName());
+		helper = new FileTeseBuilder(getClass().getSimpleName());
 	}
 
 	@After
 	public void tearDown() throws Exception {
 		monitorService.close();
-		setup.close();
-		setup.printThreads();
+		helper.close();
+		helper.printThreads();
 		log.info("[End Test]");
 	}
 
 	@Test(timeout = 2000)
 	public void testUniqueFileRead() throws Exception {
 		UniqueFile file = new UniqueFile();
-		setup.registerClosable(file);
-		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
+		helper.registerClosable(file);
+		File testFile = helper.copy(new File("src/test/data/sample_file1.txt"));
 		file.setMonitorService(monitorService);
 		file.setFile(testFile);
 		file.setInitOffset(testFile.length());
 		file.init();
 		String data = "newline";
-		setup.echo(data, testFile);
+		helper.echo(data, testFile);
 		LineRecord line = file.readLine();
 		assertThat(line, is(notNullValue()));
-		assertThat(line.getLine(), is(setup.line(data)));
+		assertThat(line.getLine(), is(helper.line(data)));
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		file.close();
 	}
@@ -65,18 +65,18 @@ public class UniqueFileTestCase {
 	@Test(timeout = 2000)
 	public void testUniqueFileLazyRead() throws Exception {
 		UniqueFile file = new UniqueFile();
-		setup.registerClosable(file);
-		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
+		helper.registerClosable(file);
+		File testFile = helper.copy(new File("src/test/data/sample_file1.txt"));
 		file.setMonitorService(monitorService);
 		file.setFile(testFile);
 		file.setInitOffset(testFile.length());
 		file.setLazyOpen(true);
 		file.init();
 		String data = "newline";
-		setup.echo(data, testFile);
+		helper.echo(data, testFile);
 		LineRecord line = file.readLine();
 		assertThat(line, is(notNullValue()));
-		assertThat(line.getLine(), is(setup.line(data)));
+		assertThat(line.getLine(), is(helper.line(data)));
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		file.close();
 	}
@@ -84,17 +84,17 @@ public class UniqueFileTestCase {
 	@Test(timeout = 8000)
 	public void testUniqueFileModifyReadTake() throws Exception {
 		UniqueFile file = new UniqueFile();
-		setup.registerClosable(file);
-		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
+		helper.registerClosable(file);
+		File testFile = helper.copy(new File("src/test/data/sample_file1.txt"));
 		file.setMonitorService(monitorService);
 		file.setFile(testFile);
 		file.setInitOffset(testFile.length());
 		file.init();
 		String data = "newline";
-		setup.echoSync(data, testFile, 1, TimeUnit.SECONDS);
+		helper.echoSync(data, testFile, 1, TimeUnit.SECONDS);
 		LineRecord line = file.readLine();
 		assertThat(line, is(notNullValue()));
-		assertThat(line.getLine(), is(setup.line(data)));
+		assertThat(line.getLine(), is(helper.line(data)));
 		assertThat(line.getLineNum(), is(equalTo(1)));
 
 		file.close();
@@ -103,20 +103,20 @@ public class UniqueFileTestCase {
 	@Test(timeout = 5000)
 	public void testUniqueFileModifyReadPoll() throws Exception {
 		UniqueFile file = new UniqueFile();
-		setup.registerClosable(file);
-		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
+		helper.registerClosable(file);
+		File testFile = helper.copy(new File("src/test/data/sample_file1.txt"));
 		file.setMonitorService(monitorService);
 		file.setFile(testFile);
 		file.setInitOffset(testFile.length());
 		file.init();
 		{
 			String data = "newline";
-			setup.echo(data, testFile);
+			helper.echo(data, testFile);
 			long now = System.currentTimeMillis();
 			LineRecord line = file.readLine(5, TimeUnit.SECONDS);
 			long duration = System.currentTimeMillis() - now;
 			assertThat(line, is(notNullValue()));
-			assertThat(line.getLine(), is(setup.line(data)));
+			assertThat(line.getLine(), is(helper.line(data)));
 			assertThat(line.getLineNum(), is(equalTo(1)));
 			assertThat(duration, is(lessThan(100L)));
 		}
@@ -124,7 +124,7 @@ public class UniqueFileTestCase {
 		Thread.sleep(1000);
 		{
 			String data = "line2";
-			setup.echoSync(data, testFile, 500, TimeUnit.MILLISECONDS);
+			helper.echoSync(data, testFile, 500, TimeUnit.MILLISECONDS);
 			long now = System.currentTimeMillis();
 			LineRecord line = file.readLine(3, TimeUnit.SECONDS);
 			long duration = System.currentTimeMillis() - now;
@@ -132,12 +132,12 @@ public class UniqueFileTestCase {
 					is(notNullValue()));
 			assertThat(duration, is(greaterThan(500L)));
 			assertThat(duration, is(lessThanOrEqualTo(3000L)));
-			assertThat(line.getLine(), is(setup.line(data)));
+			assertThat(line.getLine(), is(helper.line(data)));
 			assertThat(line.getLineNum(), is(equalTo(2)));
 		}
 		{
 			String data = "line3";
-			setup.echoSync(data, testFile, 3, TimeUnit.SECONDS);
+			helper.echoSync(data, testFile, 3, TimeUnit.SECONDS);
 			long now = System.currentTimeMillis();
 			LineRecord line = file.readLine(2, TimeUnit.SECONDS);
 			long duration = System.currentTimeMillis() - now;
@@ -150,20 +150,20 @@ public class UniqueFileTestCase {
 	@Test
 	public void testUniqueFileReadLines() throws Exception {
 		UniqueFile file = new UniqueFile();
-		setup.registerClosable(file);
-		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
+		helper.registerClosable(file);
+		File testFile = helper.copy(new File("src/test/data/sample_file1.txt"));
 		file.setMonitorService(monitorService);
 		file.setFile(testFile);
 		file.setInitOffset(testFile.length());
 		file.init();
-		setup.echo("line1", testFile);
-		setup.echo("line2", testFile);
+		helper.echo("line1", testFile);
+		helper.echo("line2", testFile);
 		Queue<LineRecord> list = new LinkedList<LineRecord>();
 		int count = file.readLines(list, 3);
 		assertThat(count, is(equalTo(2)));
 		list.clear();
-		setup.echo("line3", testFile);
-		setup.echo("line4", testFile);
+		helper.echo("line3", testFile);
+		helper.echo("line4", testFile);
 		count = file.readLines(list, 1);
 		assertThat(count, is(equalTo(1)));
 		count = file.readLines(list, 2);
@@ -176,41 +176,41 @@ public class UniqueFileTestCase {
 	@Test
 	public void testUniqueFileReadLinesQueueFull() throws Exception {
 		UniqueFile file = new UniqueFile();
-		setup.registerClosable(file);
-		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
+		helper.registerClosable(file);
+		File testFile = helper.copy(new File("src/test/data/sample_file1.txt"));
 		file.setMonitorService(monitorService);
 		file.setFile(testFile);
 		file.setInitOffset(testFile.length());
 		file.init();
-		setup.echo("line1", testFile);
-		setup.echo("line2", testFile);
-		setup.echo("line3", testFile);
-		setup.echo("line4", testFile);
+		helper.echo("line1", testFile);
+		helper.echo("line2", testFile);
+		helper.echo("line3", testFile);
+		helper.echo("line4", testFile);
 		Queue<LineRecord> list = new ArrayBlockingQueue<LineRecord>(2);
 		int count = file.readLines(list, 3);
 		assertThat(count, is(equalTo(FileContentProvider.QUEUE_FULL)));
-		assertThat(list.poll().getLine(), is(setup.line("line1")));
-		assertThat(list.poll().getLine(), is(setup.line("line2")));
+		assertThat(list.poll().getLine(), is(helper.line("line1")));
+		assertThat(list.poll().getLine(), is(helper.line("line2")));
 		list.clear();
 		count = file.readLines(list, 3);
 		assertThat(count, is(equalTo(2)));
-		assertThat(list.poll().getLine(), is(setup.line("line3")));
-		assertThat(list.poll().getLine(), is(setup.line("line4")));
+		assertThat(list.poll().getLine(), is(helper.line("line3")));
+		assertThat(list.poll().getLine(), is(helper.line("line4")));
 		file.close();
 	}
 
 	@Test
 	public void testUniqueFileGetContent() throws Exception {
 		UniqueFile file = new UniqueFile();
-		setup.registerClosable(file);
-		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
+		helper.registerClosable(file);
+		File testFile = helper.copy(new File("src/test/data/sample_file1.txt"));
 		String testFileName = testFile.toString();
 		file.setMonitorService(monitorService);
 		file.setFile(testFile);
 		file.setInitOffset(testFile.length());
 		file.init();
 		String data = "newline";
-		setup.echo(data, testFile);
+		helper.echo(data, testFile);
 		LineRecord line = file.readLine(1, TimeUnit.MILLISECONDS);
 		assertThat(line, is(notNullValue()));
 		List<FileContentInfo> contentInfos = file.getFileContentInfos(false);
@@ -242,13 +242,13 @@ public class UniqueFileTestCase {
 	@Test
 	public void testUniqueFileReadLinesWithNoMonitor() throws Exception {
 		UniqueFile file = new UniqueFile();
-		setup.registerClosable(file);
-		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
+		helper.registerClosable(file);
+		File testFile = helper.copy(new File("src/test/data/sample_file1.txt"));
 		file.setFile(testFile);
 		file.setInitOffset(testFile.length());
 		file.init();
-		setup.echo("line1", testFile);
-		setup.echo("line2", testFile);
+		helper.echo("line1", testFile);
+		helper.echo("line2", testFile);
 		Queue<LineRecord> list = new LinkedList<LineRecord>();
 		int count = file.readLines(list, 3);
 		assertThat(count, is(equalTo(2)));
@@ -261,15 +261,15 @@ public class UniqueFileTestCase {
 	@Test
 	public void testUniqueFileModifyReadTakeWithNoMonitor() throws Exception {
 		UniqueFile file = new UniqueFile();
-		setup.registerClosable(file);
-		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
+		helper.registerClosable(file);
+		File testFile = helper.copy(new File("src/test/data/sample_file1.txt"));
 		file.setFile(testFile);
 		file.setInitOffset(testFile.length());
 		file.init();
-		setup.echo("line1", testFile);
+		helper.echo("line1", testFile);
 		LineRecord line = file.readLine();
 		assertThat(line, is(notNullValue()));
-		assertThat(line.getLine(), is(setup.line("line1")));
+		assertThat(line.getLine(), is(helper.line("line1")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		line = file.readLine();
 		assertThat(line, is(nullValue()));
@@ -279,8 +279,8 @@ public class UniqueFileTestCase {
 	@Test
 	public void testUniqueFileModifyReadPollWithNoMonitor() throws Exception {
 		UniqueFile file = new UniqueFile();
-		setup.registerClosable(file);
-		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
+		helper.registerClosable(file);
+		File testFile = helper.copy(new File("src/test/data/sample_file1.txt"));
 		file.setFile(testFile);
 		file.setInitOffset(testFile.length());
 		file.init();
@@ -299,18 +299,18 @@ public class UniqueFileTestCase {
 			return;
 		}
 		UniqueFile file = new UniqueFile();
-		setup.registerClosable(file);
-		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
+		helper.registerClosable(file);
+		File testFile = helper.copy(new File("src/test/data/sample_file1.txt"));
 		String testFileName = testFile.toString();
 		file.setFile(testFile);
 		file.setMonitorService(monitorService);
 		file.setInitOffset(testFile.length());
 		file.setIdleTimeout(1);
 		file.init();
-		setup.echo("line1", testFile);
+		helper.echo("line1", testFile);
 		LineRecord line = file.readLine();
 		assertThat(line, is(notNullValue()));
-		assertThat(line.getLine(), is(setup.line("line1")));
+		assertThat(line.getLine(), is(helper.line("line1")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		FileContentInfo info = file.getFileContentInfos(false).get(0);
 		assertThat(info, is(notNullValue()));
@@ -319,13 +319,13 @@ public class UniqueFileTestCase {
 		assertThat(info.getCurrentFileName(), is(equalTo(testFileName)));
 		// try to close it to handle windows rename error
 		Thread.sleep(1100L);
-		File testFile2 = setup.rename(testFile, "sample_file2.txt");
+		File testFile2 = helper.rename(testFile, "sample_file2.txt");
 		String testFile2Name = testFile2.toString();
-		setup.echo("line2", testFile2);
+		helper.echo("line2", testFile2);
 		// force wait for file watch
 		line = file.readLine();
 		assertThat(line, is(notNullValue()));
-		assertThat(line.getLine(), is(setup.line("line2")));
+		assertThat(line.getLine(), is(helper.line("line2")));
 		assertThat(line.getLineNum(), is(equalTo(2)));
 		Thread.sleep(2000L);
 		info = file.getFileContentInfos(false).get(0);
@@ -339,18 +339,18 @@ public class UniqueFileTestCase {
 	@Test(timeout = 5000)
 	public void testUniqueFileDelete() throws Exception {
 		UniqueFile file = new UniqueFile();
-		setup.registerClosable(file);
-		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
+		helper.registerClosable(file);
+		File testFile = helper.copy(new File("src/test/data/sample_file1.txt"));
 		String testFileName = testFile.toString();
 		file.setFile(testFile);
 		file.setMonitorService(monitorService);
 		file.setInitOffset(testFile.length());
 		file.setIdleTimeout(1);
 		file.init();
-		setup.echo("line1", testFile);
+		helper.echo("line1", testFile);
 		LineRecord line = file.readLine();
 		assertThat(line, is(notNullValue()));
-		assertThat(line.getLine(), is(setup.line("line1")));
+		assertThat(line.getLine(), is(helper.line("line1")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		FileContentInfo info = file.getFileContentInfos(false).get(0);
 		assertThat(info, is(notNullValue()));
@@ -358,7 +358,7 @@ public class UniqueFileTestCase {
 		assertThat(info.getFileName(), is(equalTo(testFileName)));
 		assertThat(info.getCurrentFileName(), is(equalTo(testFileName)));
 		// try to close it to simulate file rotation delete
-		setup.delete(testFile);
+		helper.delete(testFile);
 		// force wait for file watch
 		line = file.readLine();
 		assertThat(line, is(nullValue()));
@@ -375,20 +375,20 @@ public class UniqueFileTestCase {
 	@Test(timeout = 5000)
 	public void testUniqueFilePartialLineRead() throws Exception {
 		UniqueFile file = new UniqueFile();
-		setup.registerClosable(file);
-		File testFile = setup.copy(new File("src/test/data/sample_file1.txt"));
+		helper.registerClosable(file);
+		File testFile = helper.copy(new File("src/test/data/sample_file1.txt"));
 		file.setMonitorService(monitorService);
 		file.setFile(testFile);
 		file.setInitOffset(testFile.length());
 		file.init();
 		String data = "newline";
-		setup.print(data, testFile);
+		helper.print(data, testFile);
 		LineRecord line = file.readLine(3, TimeUnit.SECONDS);
 		assertThat(line, is(nullValue()));
 		String data1 = "sameline";
-		setup.echo(data1, testFile);
+		helper.echo(data1, testFile);
 		line = file.readLine();
-		assertThat(line.getLine(), is(setup.line(data + data1)));
+		assertThat(line.getLine(), is(helper.line(data + data1)));
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		file.close();
 	}
