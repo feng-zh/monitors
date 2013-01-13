@@ -40,7 +40,7 @@ public class RandomAccessFileReader implements Closeable {
 	private static DelayQueue<TimeoutReaderReference> keepAliveQueue = new DelayQueue<TimeoutReaderReference>();
 
 	private TimeoutReaderReference timeoutReference;
-	
+
 	private volatile File previousFile = null;
 
 	static {
@@ -251,6 +251,8 @@ public class RandomAccessFileReader implements Closeable {
 		}
 		long len = file.length();
 		this.position = initOffset < 0 ? len : Math.min(initOffset, len);
+		log.debug("open file {} at offset {} {} (init:{})", new Object[] {
+				file, position, lazyOpen ? "lazy" : "now", initOffset });
 		if (!lazyOpen) {
 			open0();
 		}
@@ -344,7 +346,7 @@ public class RandomAccessFileReader implements Closeable {
 		if (closed) {
 			throw new IOException("file is not open or closed");
 		}
-		if (previousFile!=null) {
+		if (previousFile != null) {
 			File oldName = previousFile;
 			previousFile = null;
 			log.debug("try to reopen renamed file ({} -> {})", oldName, file);

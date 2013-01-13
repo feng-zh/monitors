@@ -264,4 +264,14 @@ class FileTeseBuilder implements Closeable {
 		long now = System.currentTimeMillis();
 		file.setLastModified(now - unit.toMillis(before));
 	}
+
+	public File create(String name) {
+		File targetFile = new File(targetRootFolder, name);
+		delete(targetFile);
+		try {
+			targetFile.createNewFile();
+		} catch (IOException e) {
+		}
+		return targetFile;
+	}
 }

@@ -7,6 +7,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
@@ -155,6 +156,11 @@ public class SshfsTestCase {
 
 	@Test
 	public void testFileMoreRenameRotate() throws Exception {
+		StringBuffer sb = new StringBuffer();
+		Random random = new Random();
+		for(int i=0;i<1000;i++) {
+			sb.append(Long.toHexString(random.nextLong()));
+		}
 		// System.setProperty("monitor.nio.slow", "true");
 		FolderContentProvider folder = new FolderContentProvider();
 		helper.registerClosable(folder);
@@ -167,25 +173,30 @@ public class SshfsTestCase {
 		File testFile3 = helper.copy(
 				new File("src/test/data/sample_file3.txt"), "business.log.2");
 		helper.setModifiedBefore(testFile3, 45, TimeUnit.MINUTES);
+		File testFile4 = helper.create("business.log.3");
+		helper.echo(sb.toString(), testFile4);
+		helper.setModifiedBefore(testFile4, 1, TimeUnit.HOURS);
 		folder.setMonitorService(monitorService);
 		folder.setFolder(testFile1.getParentFile());
 		folder.setTailMode(true);
 		folder.init();
-		helper.echo("line1", testFile1);
+		helper.echo("line1"+sb.substring(0, 1024).toString(), testFile1);
 		LineRecord line = folder.readLine();
 		assertThat(line, is(notNullValue()));
-		assertThat(line.getLine(), is(helper.line("line1")));
+		assertThat(new String(line.getLine()), startsWith("line1"));
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		// prepare file content info
 		List<FileContentInfo> infos = folder.getFileContentInfos(false);
-		assertThat(infos.size(), is(equalTo(3)));
+		assertThat(infos.size(), is(equalTo(4)));
+		Thread.sleep(1000L);
 		// start modify rename rotate
-		helper.echo("line2", testFile1);
-		helper.delete(testFile3);
+		helper.echo("line2"+sb.substring(0, 1024).toString(), testFile1);
+		helper.delete(testFile4);
+		helper.simulateRename(testFile3, "business.log.3");
 		helper.simulateRename(testFile2, "business.log.2");
 		helper.simulateRename(testFile1, "business.log.1");
-		helper.echo("line3", testFile1);
-		helper.echo("line4", testFile1);
+		helper.echo("line3"+sb.substring(0, 1024).toString(), testFile1);
+		helper.echo("line4"+sb.substring(0, 1024).toString(), testFile1);
 		// force wait for file watch
 		for (int i = 0; i < 3; i++) {
 			line = folder.readLine();
@@ -194,7 +205,7 @@ public class SshfsTestCase {
 		}
 		int len = folder.readLines(new LinkedList<LineRecord>(), 10);
 		infos = folder.getFileContentInfos(false);
-		assertThat(infos.size(), is(equalTo(3)));
+		assertThat(infos.size(), is(equalTo(4)));
 		assertThat(len, is(equalTo(0)));
 		folder.close();
 	}
@@ -251,7 +262,7 @@ public class SshfsTestCase {
 		folder.close();
 	}
 
-	@Test(timeout = 6000)
+	@Test
 	public void testFileSingleRotate() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
 		helper.registerClosable(folder);

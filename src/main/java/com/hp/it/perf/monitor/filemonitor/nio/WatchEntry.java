@@ -1,6 +1,8 @@
 package com.hp.it.perf.monitor.filemonitor.nio;
 
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
@@ -209,6 +211,8 @@ class WatchEntry {
 		}
 	}
 
+	private boolean folderDetected = false;
+
 	public synchronized FileMonitorKey createMonitorKey(final Path path,
 			final FileMonitorMode mode, Map<WatchKey, WatchEntry> watchKeys)
 			throws IOException {
@@ -223,6 +227,24 @@ class WatchEntry {
 			}
 		} else {
 			monitorFileKey = null;
+			if (!folderDetected) {
+				log.trace("detect all files under folder {}", watchPath);
+				DirectoryStream<Path> directoryStream = null;
+				try {
+					directoryStream = Files.newDirectoryStream(this.watchPath);
+					for (Path filePath : directoryStream) {
+						fileKeyDetector.detectFileKey(filePath);
+					}
+				} finally {
+					try {
+						if (directoryStream != null) {
+							directoryStream.close();
+						}
+					} catch (IOException ignored) {
+					}
+				}
+				folderDetected = true;
+			}
 		}
 		final FileMonitorWatchKeyImpl monitorKey = new FileMonitorWatchKeyImpl(
 				this, path, monitorFileKey, mode);

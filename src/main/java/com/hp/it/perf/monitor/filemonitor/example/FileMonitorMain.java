@@ -75,6 +75,7 @@ public class FileMonitorMain {
 				UniqueFile provider = new UniqueFile();
 				provider.setFile(file);
 				provider.setMonitorService(monitorService);
+				provider.setInitOffset(-1);
 				suite.getProviders().add(provider);
 			}
 		}

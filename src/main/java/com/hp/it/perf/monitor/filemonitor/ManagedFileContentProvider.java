@@ -37,6 +37,10 @@ abstract class ManagedFileContentProvider extends
 
 	private AtomicLong seq = new AtomicLong();
 
+	private int readLineCount;
+
+	private long readByteCount;
+
 	protected abstract String getProviderName();
 
 	public abstract List<FileContentInfo> getFileContentInfos(boolean realtime)
@@ -89,7 +93,17 @@ abstract class ManagedFileContentProvider extends
 				seq.incrementAndGet(), System.currentTimeMillis());
 		notification.setUserData(line);
 		sendNotification(notification);
+		readLineCount++;
+		readByteCount += line.getLine().length;
 		return line;
+	}
+
+	public int getReadLineCount() {
+		return readLineCount;
+	}
+
+	public long getReadByteCount() {
+		return readByteCount;
 	}
 
 	@Override
