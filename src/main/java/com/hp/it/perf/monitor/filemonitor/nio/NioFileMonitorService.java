@@ -65,8 +65,7 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 		this.watchService = watchService;
 		watchEntryName = name;
 		init();
-		log.info("init nio monitor service on {} with watch {}",
-				watchEntryName, watchService.getClass());
+		log.debug("init nio monitor service on {}", watchEntryName);
 	}
 
 	public void setKeyDetectorFactory(FileKeyDetectorFactory keyDetectorFactory) {

@@ -18,13 +18,21 @@ import javax.management.Notification;
 import javax.management.NotificationBroadcasterSupport;
 import javax.management.NotificationEmitter;
 import javax.management.NotificationListener;
+import javax.management.ObjectInstance;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 abstract class ManagedFileContentProvider extends
 		NotificationBroadcasterSupport implements NotificationEmitter,
 		MBeanRegistration {
 
+	private static final Logger log = LoggerFactory
+			.getLogger(ManagedFileContentProvider.class);
+
+	// TODO not finalized
 	public static final String DOMAIN = "com.hp.it.perf.monitor.filemonitor";
 
 	public static final String LINE_RECORD = DOMAIN + ".lineRecord";
@@ -134,7 +142,7 @@ abstract class ManagedFileContentProvider extends
 		super.handleNotification(listener, notification, handback);
 	}
 
-	protected String getProviderType() {
+	public String getProviderType() {
 		return getClass().getSimpleName();
 	}
 
@@ -166,13 +174,29 @@ abstract class ManagedFileContentProvider extends
 		Hashtable<String, String> prop = new Hashtable<String, String>(
 				objectName.getKeyPropertyList());
 		prop.put("type", mFile.getProviderType());
-		prop.put(
-				"name",
-				objectName.getKeyProperty("name") + "/"
-						+ mFile.getProviderName());
-		ObjectName fileObjectName = ObjectName.getInstance(DOMAIN, prop);
-		managedFiles.put(mbeanServer.registerMBean(mFile, fileObjectName)
-				.getObjectName(), mFile);
+		prop.put("name", mFile.getProviderName());
+		prop.put(getProviderType(), objectName.getKeyProperty("name"));
+		ObjectName fileObjectName = ObjectName.getInstance(ObjectName
+				.getInstance(DOMAIN, prop).getCanonicalName());
+		registerMBean(mFile, fileObjectName);
+		log.debug("register sub provider: {}", fileObjectName);
+	}
+
+	private synchronized void registerMBean(ManagedFileContentProvider mFile,
+			ObjectName fileObjectName) throws Exception {
+		try {
+			ManagedFileContentProvider oldProvider = managedFiles
+					.remove(fileObjectName);
+			if (oldProvider != null) {
+				unregisterMBean(fileObjectName);
+			}
+			ObjectInstance objectInstance = mbeanServer.registerMBean(mFile,
+					fileObjectName);
+			managedFiles.put(objectInstance.getObjectName(), mFile);
+		} catch (Exception e) {
+			log.warn("fail to register sub provider: " + fileObjectName, e);
+			throw e;
+		}
 	}
 
 	@Override
@@ -180,11 +204,7 @@ abstract class ManagedFileContentProvider extends
 		if (!registrationDone.booleanValue()) {
 			for (ObjectName subName : new HashSet<ObjectName>(
 					managedFiles.keySet())) {
-				try {
-					mbeanServer.unregisterMBean(subName);
-				} catch (Exception ignored) {
-				}
-				managedFiles.remove(subName);
+				unregisterMBean(subName);
 			}
 			postDeregister();
 		}
@@ -193,8 +213,7 @@ abstract class ManagedFileContentProvider extends
 	@Override
 	public void preDeregister() throws Exception {
 		for (ObjectName subName : new HashSet<ObjectName>(managedFiles.keySet())) {
-			mbeanServer.unregisterMBean(subName);
-			managedFiles.remove(subName);
+			unregisterMBean(subName);
 		}
 	}
 
@@ -209,10 +228,7 @@ abstract class ManagedFileContentProvider extends
 			if (subProvider instanceof ManagedFileContentProvider) {
 				try {
 					registerSubProvider((ManagedFileContentProvider) subProvider);
-				} catch (Exception e) {
-					// TODO Auto-generated catch block
-					// TODO log it
-					e.printStackTrace();
+				} catch (Exception ignored) {
 				}
 			}
 		}
@@ -224,17 +240,21 @@ abstract class ManagedFileContentProvider extends
 				for (ObjectName subName : new HashSet<ObjectName>(
 						managedFiles.keySet())) {
 					if (subProvider == managedFiles.get(subName)) {
-						try {
-							mbeanServer.unregisterMBean(subName);
-						} catch (Exception e) {
-							// TODO Auto-generated catch block
-							// TODO log it
-							e.printStackTrace();
-						}
-						managedFiles.remove(subName);
+						unregisterMBean(subName);
+						break;
 					}
 				}
 			}
 		}
+	}
+
+	private synchronized void unregisterMBean(ObjectName subName) {
+		try {
+			mbeanServer.unregisterMBean(subName);
+			log.debug("unregister sub provider: {}", subName);
+		} catch (Exception e) {
+			log.warn("fail to unregister sub provider: " + subName, e);
+		}
+		managedFiles.remove(subName);
 	}
 }

@@ -11,6 +11,8 @@ import java.nio.file.WatchEvent.Kind;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -431,21 +433,21 @@ public class ContentBasedFileKeyDetector implements FileKeyDetector {
 		}
 		// step 1: match all native keys matched
 		// prepare current native keys
-//		Map<FileKey, Integer> keyIdxes = new HashMap<FileKey, Integer>();
-//		for (int i = 0; i < size; i++) {
-//			if (matcher.currentUnknown(i)) {
-//				keyIdxes.put(currentEntries[i].nativeKey, i);
-//			}
-//		}
-//		// do native key match
-//		for (int i = 0; i < size; i++) {
-//			if (matcher.historyUnknown(i)) {
-//				Integer cIdx = keyIdxes.get(historyEntries[i].nativeKey);
-//				if (cIdx != null) {
-//					matcher.setMatched(i, cIdx.intValue());
-//				}
-//			}
-//		}
+		// Map<FileKey, Integer> keyIdxes = new HashMap<FileKey, Integer>();
+		// for (int i = 0; i < size; i++) {
+		// if (matcher.currentUnknown(i)) {
+		// keyIdxes.put(currentEntries[i].nativeKey, i);
+		// }
+		// }
+		// // do native key match
+		// for (int i = 0; i < size; i++) {
+		// if (matcher.historyUnknown(i)) {
+		// Integer cIdx = keyIdxes.get(historyEntries[i].nativeKey);
+		// if (cIdx != null) {
+		// matcher.setMatched(i, cIdx.intValue());
+		// }
+		// }
+		// }
 		// step 2: match possible same modified/size (only unique)
 		// possible not load signature at all (for many rotated files)
 		for (int i = 0; i < size; i++) {
@@ -666,6 +668,32 @@ public class ContentBasedFileKeyDetector implements FileKeyDetector {
 				}
 			}
 		}
+		Collections.sort(list, new Comparator<WatchEventKeys>() {
+
+			@Override
+			public int compare(WatchEventKeys w1, WatchEventKeys w2) {
+				Kind<?> k1 = w1.event.kind();
+				Kind<?> k2 = w2.event.kind();
+				return Integer.compare(toOrdinal(k1), toOrdinal(k2));
+			}
+
+			private int toOrdinal(Kind<?> kind) {
+				// delete, rename-from, rename-to, create, modify
+				if (kind == StandardWatchEventKinds.ENTRY_MODIFY) {
+					return 5;
+				} else if (kind == WatchEntry.ENTRY_RENAME_TO) {
+					return 3;
+				} else if (kind == WatchEntry.ENTRY_RENAME_FROM) {
+					return 2;
+				} else if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
+					return 4;
+				} else if (kind == StandardWatchEventKinds.ENTRY_DELETE) {
+					return 1;
+				} else {
+					return 0;
+				}
+			}
+		});
 		return list;
 	}
 

@@ -16,7 +16,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 // This is not thread safe
 // Provider for one file with same i-node (file key)
 // low level provider for file created
@@ -31,6 +30,8 @@ public class UniqueFile extends ManagedFileContentProvider implements
 
 	private File file;
 
+	private File currentFile;
+
 	private long initOffset;
 
 	private int idleTimeout = DefaultIdleTimeout;
@@ -38,8 +39,6 @@ public class UniqueFile extends ManagedFileContentProvider implements
 	private boolean lazyOpen = DefaultLazyOpen;
 
 	private String originalPath;
-
-	private String currentPath;
 
 	private FileKey fileKey;
 
@@ -133,6 +132,10 @@ public class UniqueFile extends ManagedFileContentProvider implements
 
 	public void setFile(File file) {
 		this.file = file;
+	}
+
+	public File getCurrentFile() {
+		return currentFile;
 	}
 
 	public long getInitOffset() {
@@ -315,12 +318,12 @@ public class UniqueFile extends ManagedFileContentProvider implements
 		FileContentInfo info = new FileContentInfo();
 		info.setFileKey(fileKey);
 		info.setFileName(originalPath);
-		info.setCurrentFileName(currentPath);
+		info.setCurrentFileName(currentFile == null ? null : currentFile
+				.getPath());
 		info.setProviderId(providerId);
 		info.setOffset(reader.position());
 		if (realtime) {
-			if (currentPath != null) {
-				File currentFile = new File(currentPath);
+			if (currentFile != null) {
 				info.setLastModified(currentFile.lastModified());
 				info.setLength(currentFile.length());
 			} else {
@@ -343,26 +346,11 @@ public class UniqueFile extends ManagedFileContentProvider implements
 		reader.setKeepAlive(idleTimeout);
 		reader.open(initOffset, lazyOpen);
 		fileKey = FileMonitors.getKeyByFile(file);
+		originalPath = file.getPath();
 		log.trace("create random access file reader for file {} with key {}",
 				file, fileKey);
-		originalPath = file.getPath();
-		currentPath = originalPath;
+		currentFile = file;
 		if (monitorService != null) {
-			changeKey = monitorService.singleRegister(file,
-					FileMonitorMode.MODIFY);
-			changeKey.addMonitorListener(updater);
-			// changeKey.addMonitorListener(new FileMonitorListener() {
-			//
-			// @Override
-			// public void onChanged(FileMonitorEvent event) {
-			// String newPath = event.getChangedFile().getPath();
-			// // if (newPath != null && !newPath.equals(currentPath)) {
-			// log.debug("file {} is renamed as {}", currentPath, newPath);
-			// // }
-			// currentPath = newPath;
-			// }
-			// });
-			log.trace("register change monitor key for file {}", file);
 			deleteKey = monitorService.singleRegister(file,
 					FileMonitorMode.DELETE);
 			deleteKey.addMonitorListener(new FileMonitorListener() {
@@ -371,8 +359,8 @@ public class UniqueFile extends ManagedFileContentProvider implements
 				public void onChanged(FileMonitorEvent event) {
 					// file is deleted from current folder
 					log.debug("file {} is deleted from current folder",
-							currentPath);
-					currentPath = null;
+							currentFile);
+					currentFile = null;
 					closeChangeKey();
 					checker.update(updater, ContentUpdateChecker.InvalidTick);
 				}
@@ -386,15 +374,19 @@ public class UniqueFile extends ManagedFileContentProvider implements
 				@Override
 				public void onChanged(FileMonitorEvent event) {
 					// file is renamed in current folder
-					String newPath = event.getChangedFile().getPath();
-					log.debug("file {} is renamed as {}", currentPath, newPath);
-					currentPath = newPath;
+					log.debug("file {} is renamed as {}", currentFile,
+							event.getChangedFile());
+					currentFile = event.getChangedFile();
 					reader.changeFileName(event.getChangedFile());
 				}
 			});
 			// make sure reader get rename first
 			renameKey.addMonitorListener(updater);
 			log.trace("register rename monitor key for file {}", file);
+			changeKey = monitorService.singleRegister(file,
+					FileMonitorMode.MODIFY);
+			changeKey.addMonitorListener(updater);
+			log.trace("register change monitor key for file {}", file);
 		}
 	}
 
@@ -414,12 +406,13 @@ public class UniqueFile extends ManagedFileContentProvider implements
 
 	@Override
 	public String toString() {
-		return String.format("UniqueFile (file=%s)", file);
+		return String.format("UniqueFile (file=%s%s)", file,
+				file.equals(currentFile) ? "" : ",current=" + currentFile);
 	}
 
 	@Override
 	protected String getProviderName() {
-		return file.getName();
+		return currentFile == null ? file.getName() : currentFile.getName();
 	}
 
 	@Override

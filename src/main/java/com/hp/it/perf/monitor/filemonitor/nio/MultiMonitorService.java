@@ -15,11 +15,17 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.hp.it.perf.monitor.filemonitor.FileMonitorKey;
 import com.hp.it.perf.monitor.filemonitor.FileMonitorMode;
 import com.hp.it.perf.monitor.filemonitor.FileMonitorService;
 
 public class MultiMonitorService implements FileMonitorService {
+
+	private static final Logger log = LoggerFactory
+			.getLogger(MultiMonitorService.class);
 
 	private Map<FileStore, FileMonitorService> storeMonitors = new HashMap<FileStore, FileMonitorService>();
 
@@ -32,6 +38,7 @@ public class MultiMonitorService implements FileMonitorService {
 		@Override
 		protected boolean removeEldestEntry(
 				java.util.Map.Entry<Path, FileStore> eldest) {
+			// TODO constant
 			return size() > 256;
 		}
 	};
@@ -64,9 +71,13 @@ public class MultiMonitorService implements FileMonitorService {
 		// end find store
 		FileMonitorService monitorService = storeMonitors.get(store);
 		if (monitorService == null) {
+			WatchService watchService = createWatchService(store);
 			monitorService = new NioFileMonitorService(store.name(),
-					createWatchService(store));
-			if ("fuse".equals(store.type())) {
+					watchService);
+			log.info("create watch service for store [({}){}]: {}",
+					new Object[] { store.type(), store.name(),
+							watchService.getClass().getName() });
+			if (isFuseType(store)) {
 				((NioFileMonitorService) monitorService)
 						.setKeyDetectorFactory(new FileKeyDetectorFactory() {
 
@@ -82,7 +93,7 @@ public class MultiMonitorService implements FileMonitorService {
 	}
 
 	private WatchService createWatchService(FileStore store) throws IOException {
-		if ("fuse".equals(store.type())) {
+		if (isFuseType(store)) {
 			// make polling watch service as for fuse
 			try {
 				pollingWatchConstructor = Class.forName(
@@ -91,8 +102,8 @@ public class MultiMonitorService implements FileMonitorService {
 				pollingWatchConstructor.setAccessible(true);
 				return (WatchService) pollingWatchConstructor.newInstance();
 			} catch (Exception e) {
-				// TODO log it
-				e.printStackTrace();
+				log.warn("cannot create polling watch service on store "
+						+ store.name(), e);
 			}
 		}
 		return FileSystems.getDefault().newWatchService();
@@ -116,6 +127,10 @@ public class MultiMonitorService implements FileMonitorService {
 		for (Entry<FileStore, FileMonitorService> entry : entries) {
 			entry.getValue().close();
 		}
+	}
+
+	protected boolean isFuseType(FileStore store) {
+		return store.type().startsWith("fuse");
 	}
 
 }

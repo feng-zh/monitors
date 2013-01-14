@@ -43,6 +43,14 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 	private static final Logger log = LoggerFactory
 			.getLogger(FolderContentProvider.class);
 
+	private FileMonitorKey folderRemoveKey;
+
+	private FileMonitorKey folderChangeKey;
+
+	private FileMonitorKey folderCreateKey;
+
+	private FileMonitorKey folderRenameKey;
+
 	public File getFolder() {
 		return folder;
 	}
@@ -247,46 +255,7 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 		if (!folder.isDirectory()) {
 			throw new IOException("invalid folder: " + folder);
 		}
-		FileMonitorKey folderCreateKey = monitorService.folderRegister(folder,
-				FileMonitorMode.CREATE);
-		folderCreateKey.addMonitorListener(new FileMonitorListener() {
-
-			@Override
-			public void onChanged(FileMonitorEvent event) {
-				File updatedFile = event.getChangedFile();
-				try {
-					addMonitorFile(updatedFile, 0);
-					log.trace("folder entry is added for file: {} with key {}",
-							updatedFile, event.getChangedFileKey());
-					folderUpdateNotifier.onChanged(event);
-				} catch (IOException e) {
-					log.warn(
-							"folder entry added fail for file: {} with key {}: {}",
-							new Object[] { updatedFile,
-									event.getChangedFileKey(), e });
-				}
-			}
-
-		});
-		log.trace("register create monitor key for folder {}", folder);
-		FileMonitorKey folderChangeKey = monitorService.folderRegister(folder,
-				FileMonitorMode.MODIFY);
-		folderChangeKey.addMonitorListener(new FileMonitorListener() {
-
-			@Override
-			public void onChanged(FileMonitorEvent event) {
-				FileKey fileKey = event.getChangedFileKey();
-				FileContentProvider f = files.get(fileKey);
-				log.trace("folder is changed by file: {} for key {}", f,
-						fileKey);
-				if (f != null) {
-					folderUpdateNotifier.onChanged(event);
-				}
-			}
-		});
-		folderChangeKey.addMonitorListener(folderUpdateNotifier);
-		log.trace("register modify monitor key for folder {}", folder);
-		FileMonitorKey folderRemoveKey = monitorService.folderRegister(folder,
+		folderRemoveKey = monitorService.folderRegister(folder,
 				FileMonitorMode.DELETE);
 		folderRemoveKey.addMonitorListener(new FileMonitorListener() {
 
@@ -304,6 +273,79 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 			}
 		});
 		log.trace("register delete monitor key for folder {}", folder);
+		folderRenameKey = monitorService.folderRegister(folder,
+				FileMonitorMode.RENAME);
+		folderRenameKey.addMonitorListener(new FileMonitorListener() {
+
+			@Override
+			public void onChanged(FileMonitorEvent event) {
+				FileContentProvider renamedFile = files.get(event
+						.getChangedFileKey());
+				log.info("folder entry is renamed as {}",
+						event.getChangedFile());
+				if (renamedFile != null) {
+					onSubProviderRemoved(renamedFile);
+					if (filter == null || filter.accept(event.getChangedFile())) {
+						// continue use this one
+						onSubProviderCreated(renamedFile);
+					} else {
+						// remove it now
+						files.remove(event.getChangedFileKey());
+						try {
+							renamedFile.close();
+						} catch (IOException e) {
+							log.warn(
+									"close folder entry fail for file: {}: {}",
+									new Object[] { event.getChangedFile(), e });
+						}
+					}
+				}
+			}
+
+		});
+		log.trace("register rename monitor key for folder {}", folder);
+		folderCreateKey = monitorService.folderRegister(folder,
+				FileMonitorMode.CREATE);
+		folderCreateKey.addMonitorListener(new FileMonitorListener() {
+
+			@Override
+			public void onChanged(FileMonitorEvent event) {
+				File updatedFile = event.getChangedFile();
+				try {
+					if (filter == null || filter.accept(updatedFile)) {
+						addMonitorFile(updatedFile, 0);
+						log.trace(
+								"folder entry is added for file: {} with key {}",
+								updatedFile, event.getChangedFileKey());
+					}
+				} catch (IOException e) {
+					log.warn(
+							"folder entry added fail for file: {} with key {}: {}",
+							new Object[] { updatedFile,
+									event.getChangedFileKey(), e });
+				}
+				folderUpdateNotifier.onChanged(event);
+			}
+
+		});
+		log.trace("register create monitor key for folder {}", folder);
+		folderChangeKey = monitorService.folderRegister(folder,
+				FileMonitorMode.MODIFY);
+		folderChangeKey.addMonitorListener(new FileMonitorListener() {
+
+			@Override
+			public void onChanged(FileMonitorEvent event) {
+				FileKey fileKey = event.getChangedFileKey();
+				FileContentProvider f = files.get(fileKey);
+				log.trace("folder is changed by file: {} for key {}", f,
+						fileKey);
+				if (f != null) {
+					folderUpdateNotifier.onChanged(event);
+				}
+			}
+		});
+		folderChangeKey.addMonitorListener(folderUpdateNotifier);
+		log.trace("register modify monitor key for folder {}", folder);
 		// self update register (for new file added etc)
 		folderUpdateNotifier.addObserver(filesUpdateNotifier);
 		for (File f : folder.listFiles()) {
@@ -325,9 +367,46 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 			toClearFiles = new ArrayList<FileContentProvider>(files.values());
 			files.clear();
 		}
+		closeCreateKey();
+		closeChangeKey();
+		closeRenameKey();
+		closeDeleteKey();
 		for (FileContentProvider f : toClearFiles) {
 			f.removeUpdateObserver(filesUpdateNotifier);
 			f.close();
+		}
+	}
+
+	private void closeDeleteKey() {
+		if (folderRemoveKey != null) {
+			folderRemoveKey.close();
+			folderRemoveKey = null;
+			log.trace("unregister delete monitor key for folder {}", folder);
+		}
+	}
+
+	private void closeChangeKey() {
+		if (folderChangeKey != null) {
+			folderChangeKey.removeMonitorListener(folderUpdateNotifier);
+			folderChangeKey.close();
+			folderChangeKey = null;
+			log.trace("unregister change monitor key for folder {}", folder);
+		}
+	}
+
+	private void closeRenameKey() {
+		if (folderRenameKey != null) {
+			folderRenameKey.close();
+			folderRenameKey = null;
+			log.trace("unregister rename monitor key for folder {}", folder);
+		}
+	}
+
+	private void closeCreateKey() {
+		if (folderCreateKey != null) {
+			folderCreateKey.close();
+			folderCreateKey = null;
+			log.trace("unregister create monitor key for folder {}", folder);
 		}
 	}
 
