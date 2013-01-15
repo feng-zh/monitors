@@ -82,11 +82,11 @@ public class FileMonitorMain {
 			}
 		}
 		suite.init();
-		Hashtable<String, String> prop = new Hashtable<String, String>();
-		prop.put("type", suite.getProviderType());
-		prop.put("name", "composite1");
-		ManagementFactory.getPlatformMBeanServer().registerMBean(suite,
-				ObjectName.getInstance(CompositeContentProvider.DOMAIN, prop));
+//		Hashtable<String, String> prop = new Hashtable<String, String>();
+//		prop.put("type", suite.getProviderType());
+//		prop.put("name", "composite1");
+//		ManagementFactory.getPlatformMBeanServer().registerMBean(suite,
+//				ObjectName.getInstance(CompositeContentProvider.DOMAIN, prop));
 		// setup remote mbean server
 		setupJMXConnectorServer();
 		LineRecord line;

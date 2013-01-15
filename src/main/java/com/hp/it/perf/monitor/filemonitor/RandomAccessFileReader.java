@@ -19,7 +19,7 @@ public class RandomAccessFileReader implements Closeable {
 	private static Logger log = LoggerFactory
 			.getLogger(RandomAccessFileReader.class);
 
-	private RandomAccessFile access;
+	private volatile RandomAccessFile access;
 
 	private int loadedLineNumber;
 
@@ -262,8 +262,12 @@ public class RandomAccessFileReader implements Closeable {
 		this.access = new RandomAccessFile(file, "r");
 		access.seek(position);
 		long newPosition = access.getFilePointer();
-		log.debug("open random access file {} at offset {}", file, newPosition
-				+ (newPosition != position ? "(seeking " + position + ")" : ""));
+		log.debug("open random access file {} at offset {} by reader@{}",
+				new Object[] {
+						file,
+						newPosition
+								+ (newPosition != position ? "(seeking "
+										+ position + ")" : ""), hashCode() });
 		position = newPosition;
 	}
 
@@ -284,8 +288,8 @@ public class RandomAccessFileReader implements Closeable {
 			lineBuf.delete(0, lineBuf.count);
 			// close access
 			accessFile.close();
-			log.debug("close random access file {} at offset {}", fileName,
-					position);
+			log.debug("close random access file {} at offset {} by reader@{}",
+					new Object[] { fileName, position, hashCode() });
 		}
 	}
 
