@@ -246,18 +246,34 @@ class FileTeseBuilder implements Closeable {
 		closeableList.add(closeable);
 	}
 
-	public File simulateRename(File file, String newFileName)
+	public File simulateRename(File file, String newFileName, boolean trancate)
 			throws IOException {
 		File newFile = new File(file.getParentFile(), newFileName);
 		if (newFile.exists()) {
-			delete(newFile);
+			trancate(newFile, 0);
 		}
 		copyFile(file, newFile);
-		delete(file);
+		if (trancate) {
+			trancate(file, 0);
+		} else {
+			delete(file);
+		}
 		log.trace("{} (simulate) rename to {}", file.getName(),
 				newFile.getName());
 		newFile.deleteOnExit();
 		return newFile;
+	}
+
+	public void trancate(File file, long offset) {
+		RandomAccessFile access = null;
+		try {
+			access = new RandomAccessFile(file, "rw");
+			access.setLength(offset);
+		} catch (IOException e) {
+			log.trace("trancate file fail: {}", e.toString());
+		} finally {
+			close(access);
+		}
 	}
 
 	public void setModifiedBefore(File file, int before, TimeUnit unit) {

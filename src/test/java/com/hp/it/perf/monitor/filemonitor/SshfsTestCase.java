@@ -75,7 +75,7 @@ public class SshfsTestCase {
 		assertThat(infos.get(testFile1Index).getCurrentFileName(),
 				is(equalTo(testFile1.getPath())));
 		// start rename simple
-		File testFile1x = helper.simulateRename(testFile1, "sample_file1a.txt");
+		File testFile1x = helper.simulateRename(testFile1, "sample_file1a.txt", false);
 		Thread.sleep(2500L);
 		helper.echo("line2", testFile1x);
 		// force wait for file watch
@@ -123,8 +123,8 @@ public class SshfsTestCase {
 		assertThat(infos.get(testFile2Index).getCurrentFileName(),
 				is(equalTo(testFile2.getPath())));
 		// start rename rotate
-		File testFile2x = helper.simulateRename(testFile2, "sample_file3.txt");
-		File testFile1x = helper.simulateRename(testFile1, "sample_file2.txt");
+		File testFile2x = helper.simulateRename(testFile2, "sample_file3.txt", true);
+		File testFile1x = helper.simulateRename(testFile1, "sample_file2.txt", false);
 		Thread.sleep(2500L);
 		helper.echo("line2", testFile1x);
 		// force wait for file watch
@@ -192,9 +192,9 @@ public class SshfsTestCase {
 		// start modify rename rotate
 		helper.echo("line2"+sb.substring(0, 1024).toString(), testFile1);
 		helper.delete(testFile4);
-		helper.simulateRename(testFile3, "business.log.3");
-		helper.simulateRename(testFile2, "business.log.2");
-		helper.simulateRename(testFile1, "business.log.1");
+		helper.simulateRename(testFile3, "business.log.3", true);
+		helper.simulateRename(testFile2, "business.log.2", true);
+		helper.simulateRename(testFile1, "business.log.1", true);
 		helper.echo("line3"+sb.substring(0, 1024).toString(), testFile1);
 		helper.echo("line4"+sb.substring(0, 1024).toString(), testFile1);
 		// force wait for file watch
@@ -245,8 +245,8 @@ public class SshfsTestCase {
 		// quick modify
 		helper.echo("line2", testFile2);
 		// start rename rotate
-		File testFile2x = helper.simulateRename(testFile2, "sample_file3.txt");
-		File testFile1x = helper.simulateRename(testFile1, "sample_file2.txt");
+		File testFile2x = helper.simulateRename(testFile2, "sample_file3.txt", true);
+		File testFile1x = helper.simulateRename(testFile1, "sample_file2.txt", false);
 		Thread.sleep(2500L);
 		// force wait for file watch
 		line = folder.readLine();
@@ -285,7 +285,7 @@ public class SshfsTestCase {
 				is(equalTo(testFile1.getPath())));
 		// start rename rotate, and create new one
 		helper.echo("line2", testFile1);
-		helper.simulateRename(testFile1, "sample_file2.txt");
+		helper.simulateRename(testFile1, "sample_file2.txt", true);
 		helper.echo("line3", testFile1);
 		Thread.sleep(2500L);
 		// force wait for file watch
@@ -347,7 +347,7 @@ public class SshfsTestCase {
 				is(equalTo(testFile2.getPath())));
 		// start rename rotate
 		helper.delete(testFile2);
-		helper.simulateRename(testFile1, "sample_file2.txt");
+		helper.simulateRename(testFile1, "sample_file2.txt", false);
 		helper.echo("line2", testFile1);
 		// force wait for file watch
 		line = folder.readLine();
@@ -401,7 +401,7 @@ public class SshfsTestCase {
 		assertThat(infos.get(testFile2Index).getCurrentFileName(),
 				is(equalTo(testFile2.getPath())));
 		// start move override
-		File testFile1x = helper.simulateRename(testFile1, "sample_file2.txt");
+		File testFile1x = helper.simulateRename(testFile1, "sample_file2.txt", true);
 		helper.echo("line2", testFile1x);
 		// force wait for file watch
 		line = folder.readLine();

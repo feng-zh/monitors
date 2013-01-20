@@ -199,15 +199,16 @@ class WatchEntry {
 				// prepare file key
 				FileMonitorEvent monitorEvent = converter.convert(
 						eventKeys.event, eventKeys.currentFileKey);
-				log.trace(
-						"{} on '{}' match {}({})",
-						new Object[] {
-								event.kind(),
-								event.context(),
-								monitorKey.getMonitorMode(),
-								monitorKey.getMonitorPath() == null ? watchPath
-										: monitorKey.getMonitorPath() });
 				if (monitorEvent != null) {
+					log.trace(
+							"{} on '{}' {} {}({})",
+							new Object[] {
+									event.kind(),
+									event.context(),
+									monitorEvent == null ? "not match" : "*match*",
+											monitorKey.getMonitorMode(),
+											monitorKey.getMonitorPath() == null ? watchPath
+													: monitorKey.getMonitorPath() });
 					monitorEvents.add(monitorEvent);
 				}
 			}
