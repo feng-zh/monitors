@@ -32,7 +32,9 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 	private ContentUpdateObservable folderUpdateNotifier = new ContentUpdateObservable(
 			this);
 
-	private Map<FileKey, FileContentProvider> files = new ConcurrentHashMap<FileKey, FileContentProvider>();
+	private Map<Object, FileContentProvider> fileMap = new ConcurrentHashMap<Object, FileContentProvider>();
+
+	private List<FileContentProvider> files = new ArrayList<FileContentProvider>();
 
 	private Deque<FileContentProvider> lastUpdateFiles = new LinkedList<FileContentProvider>();
 
@@ -261,8 +263,9 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 
 			@Override
 			public void onChanged(FileMonitorEvent event) {
-				FileContentProvider removedFile = files.remove(event
+				FileContentProvider removedFile = fileMap.remove(event
 						.getChangedFileKey());
+				files.remove(removedFile);
 				log.trace("folder entry is deleted for file: {} with key {}",
 						removedFile == null ? null : removedFile,
 						event.getChangedFileKey());
@@ -279,7 +282,7 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 
 			@Override
 			public void onChanged(FileMonitorEvent event) {
-				FileContentProvider renamedFile = files.get(event
+				FileContentProvider renamedFile = fileMap.get(event
 						.getChangedFileKey());
 				log.info("folder entry is renamed as {}",
 						event.getChangedFile());
@@ -290,7 +293,9 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 						onSubProviderCreated(renamedFile);
 					} else {
 						// remove it now
-						files.remove(event.getChangedFileKey());
+						files.remove(renamedFile);
+						fileMap.remove(((UniqueFile) renamedFile)
+								.getUniqueFileKey());
 						try {
 							renamedFile.close();
 						} catch (IOException e) {
@@ -335,8 +340,8 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 
 			@Override
 			public void onChanged(FileMonitorEvent event) {
-				FileKey fileKey = event.getChangedFileKey();
-				FileContentProvider f = files.get(fileKey);
+				Object fileKey = event.getChangedFileKey();
+				FileContentProvider f = fileMap.get(fileKey);
 				log.trace("folder is changed by file: {} for key {}", f,
 						fileKey);
 				if (f != null) {
@@ -364,8 +369,9 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 		List<FileContentProvider> toClearFiles;
 		// to avoid deadlock
 		synchronized (this) {
-			toClearFiles = new ArrayList<FileContentProvider>(files.values());
+			toClearFiles = new ArrayList<FileContentProvider>(files);
 			files.clear();
+			fileMap.clear();
 		}
 		closeCreateKey();
 		closeChangeKey();
@@ -415,7 +421,7 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 			throws IOException {
 		List<FileContentInfo> infos = new ArrayList<FileContentInfo>(
 				files.size());
-		for (FileContentProvider f : files.values()) {
+		for (FileContentProvider f : files) {
 			infos.addAll(f.getFileContentInfos(realtime));
 		}
 		return infos;
@@ -453,14 +459,18 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 			}
 		}
 		onSubProviderCreated(uniqueFile);
-		FileKey fileKey = uniqueFile.getUniqueKey();
-		files.put(fileKey, uniqueFile);
+		files.add(uniqueFile);
+		if (monitorService != null) {
+			Object uniqueFileKey = monitorService.getKeyByFile(file);
+			uniqueFile.setUniqueFileKey(uniqueFileKey);
+			fileMap.put(uniqueFileKey, uniqueFile);
+			log.debug("single file {} is registered with unique key {}", file,
+					uniqueFileKey);
+		}
 		if (initOffset >= 0) {
 			// need to check if read required (<0 means at end of file)
 			lastUpdateFiles.offer(uniqueFile);
 		}
-		log.debug("single file {} is registered with unique key {}", file,
-				fileKey);
 		return uniqueFile;
 	}
 
@@ -472,7 +482,7 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 	@Override
 	public String[] getFileNames() {
 		List<String> fileList = new ArrayList<String>(files.size());
-		for (FileContentProvider file : files.values()) {
+		for (FileContentProvider file : files) {
 			if (file instanceof UniqueFile) {
 				fileList.add(((UniqueFile) file).getFileName());
 			}
@@ -487,7 +497,7 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 
 	@Override
 	protected Collection<FileContentProvider> providers() {
-		return files.values();
+		return files;
 	}
 
 	@Override

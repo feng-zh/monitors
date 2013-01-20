@@ -1,8 +1,8 @@
-package com.hp.it.perf.monitor.filemonitor;
+package com.hp.it.perf.monitor.filemonitor.nio;
 
 import java.io.Serializable;
 
-public class FileKey implements Serializable {
+class FileKey implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 

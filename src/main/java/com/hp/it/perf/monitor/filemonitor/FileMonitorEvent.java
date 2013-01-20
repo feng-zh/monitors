@@ -13,7 +13,7 @@ public class FileMonitorEvent extends EventObject {
 
 	private File changedFile;
 
-	private FileKey changedFileKey;
+	private Object changedFileKey;
 
 	private FileMonitorKey monitorKey;
 
@@ -58,11 +58,11 @@ public class FileMonitorEvent extends EventObject {
 		this.monitorMode = monitorMode;
 	}
 
-	public FileKey getChangedFileKey() {
+	public Object getChangedFileKey() {
 		return changedFileKey;
 	}
 
-	public void setChangedFileKey(FileKey changedFileKey) {
+	public void setChangedFileKey(Object changedFileKey) {
 		this.changedFileKey = changedFileKey;
 	}
 

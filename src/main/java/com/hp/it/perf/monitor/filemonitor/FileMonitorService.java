@@ -11,5 +11,7 @@ public interface FileMonitorService extends Closeable {
 
 	public FileMonitorKey folderRegister(File file, FileMonitorMode mode)
 			throws IOException, IllegalStateException;
+	
+	public Object getKeyByFile(File file) throws IOException;
 
 }

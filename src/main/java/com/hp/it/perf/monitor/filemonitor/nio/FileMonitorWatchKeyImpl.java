@@ -4,7 +4,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import com.hp.it.perf.monitor.filemonitor.FileKey;
 import com.hp.it.perf.monitor.filemonitor.FileMonitorEvent;
 import com.hp.it.perf.monitor.filemonitor.FileMonitorKey;
 import com.hp.it.perf.monitor.filemonitor.FileMonitorListener;

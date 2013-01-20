@@ -40,8 +40,6 @@ public class UniqueFile extends ManagedFileContentProvider implements
 
 	private String originalPath;
 
-	private FileKey fileKey;
-
 	private RandomAccessFileReader reader;
 
 	private FileMonitorService monitorService;
@@ -57,6 +55,8 @@ public class UniqueFile extends ManagedFileContentProvider implements
 	private ContentUpdateChecker checker = new ContentUpdateChecker(updater);
 
 	private FileMonitorKey renameKey;
+
+	private Object uniqueFileKey;
 
 	private static class ContentUpdateChecker implements Observer {
 
@@ -316,7 +316,6 @@ public class UniqueFile extends ManagedFileContentProvider implements
 	public List<FileContentInfo> getFileContentInfos(boolean realtime)
 			throws IOException {
 		FileContentInfo info = new FileContentInfo();
-		info.setFileKey(fileKey);
 		info.setFileName(originalPath);
 		info.setCurrentFileName(currentFile == null ? null : currentFile
 				.getPath());
@@ -345,10 +344,8 @@ public class UniqueFile extends ManagedFileContentProvider implements
 		reader = new RandomAccessFileReader(file);
 		reader.setKeepAlive(idleTimeout);
 		reader.open(initOffset, lazyOpen);
-		fileKey = FileMonitors.getKeyByFile(file);
 		originalPath = file.getPath();
-		log.trace("create random access file reader for file {} with key {}",
-				file, fileKey);
+		log.trace("create random access file reader for file {}", file);
 		currentFile = file;
 		if (monitorService != null) {
 			deleteKey = monitorService.singleRegister(file,
@@ -390,8 +387,12 @@ public class UniqueFile extends ManagedFileContentProvider implements
 		}
 	}
 
-	FileKey getUniqueKey() {
-		return fileKey;
+	Object getUniqueFileKey() {
+		return uniqueFileKey;
+	}
+	
+	void setUniqueFileKey(Object uniqueFileKey) {
+		this.uniqueFileKey = uniqueFileKey;
 	}
 
 	@Override

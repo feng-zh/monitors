@@ -203,4 +203,9 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 			watchService.close();
 		}
 	}
+
+	@Override
+	public Object getKeyByFile(File file) throws IOException {
+		return FileMonitors.getKeyByFile(file);
+	}
 }

@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hp.it.perf.monitor.filemonitor.FileKey;
 import com.hp.it.perf.monitor.filemonitor.FileMonitorEvent;
 import com.hp.it.perf.monitor.filemonitor.FileMonitorKey;
 import com.hp.it.perf.monitor.filemonitor.FileMonitorMode;

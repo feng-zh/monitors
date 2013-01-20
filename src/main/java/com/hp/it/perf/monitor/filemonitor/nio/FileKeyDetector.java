@@ -4,7 +4,6 @@ import java.nio.file.Path;
 import java.nio.file.WatchEvent;
 import java.util.List;
 
-import com.hp.it.perf.monitor.filemonitor.FileKey;
 
 public interface FileKeyDetector {
 

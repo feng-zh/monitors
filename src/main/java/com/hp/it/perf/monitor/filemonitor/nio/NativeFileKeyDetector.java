@@ -7,7 +7,6 @@ import java.nio.file.WatchEvent.Kind;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.hp.it.perf.monitor.filemonitor.FileKey;
 
 public class NativeFileKeyDetector implements FileKeyDetector {
 

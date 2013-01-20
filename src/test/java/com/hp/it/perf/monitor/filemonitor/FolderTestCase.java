@@ -153,7 +153,7 @@ public class FolderTestCase {
 		helper.echo("line1", testFile1);
 		helper.echo("line2", testFile1);
 		// wait for poll time window
-		Thread.sleep(2000L);
+		Thread.sleep(2500L);
 		Queue<LineRecord> list = new LinkedList<LineRecord>();
 		int count = folder.readLines(list, 3);
 		assertThat(count, is(equalTo(2)));
@@ -221,7 +221,6 @@ public class FolderTestCase {
 		assertThat(contentInfos.size(), is(equalTo(1)));
 		FileContentInfo info = contentInfos.get(0);
 		assertThat(info, is(notNullValue()));
-		assertThat(info.fileKey(), is(notNullValue()));
 		assertThat(info.getFileName(), is(equalTo(testFileName1)));
 		assertThat(info.getCurrentFileName(), is(equalTo(testFileName1)));
 		assertThat(info.getProviderId(), is(not(equalTo(0L))));
@@ -232,7 +231,6 @@ public class FolderTestCase {
 		assertThat(contentInfos.size(), is(equalTo(1)));
 		info = contentInfos.get(0);
 		assertThat(info, is(notNullValue()));
-		assertThat(info.fileKey(), is(notNullValue()));
 		assertThat(info.getFileName(), is(equalTo(testFileName1)));
 		assertThat(info.getCurrentFileName(), is(equalTo(testFileName1)));
 		assertThat(info.getProviderId(), is(equalTo(line.getProviderId())));
@@ -392,7 +390,6 @@ public class FolderTestCase {
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		FileContentInfo info = folder.getFileContentInfos(false).get(0);
 		assertThat(info, is(notNullValue()));
-		assertThat(info.fileKey(), is(notNullValue()));
 		assertThat(info.getFileName(), is(equalTo(testFileName)));
 		assertThat(info.getCurrentFileName(), is(equalTo(testFileName)));
 		// try to close it to simulate file rotation delete

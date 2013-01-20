@@ -8,7 +8,6 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.hp.it.perf.monitor.filemonitor.FileKey;
 
 class PathKeyResolver {
 

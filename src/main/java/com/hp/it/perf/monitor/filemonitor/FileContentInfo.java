@@ -8,8 +8,6 @@ public class FileContentInfo implements Serializable {
 
 	private String fileName;
 
-	private transient FileKey fileKey;
-
 	private long providerId;
 
 	private String currentFileName;
@@ -51,14 +49,6 @@ public class FileContentInfo implements Serializable {
 
 	public void setLength(long length) {
 		this.length = length;
-	}
-
-	public FileKey fileKey() {
-		return fileKey;
-	}
-
-	void setFileKey(FileKey fileKey) {
-		this.fileKey = fileKey;
 	}
 
 	public long getProviderId() {

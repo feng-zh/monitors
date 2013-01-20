@@ -133,4 +133,9 @@ public class MultiMonitorService implements FileMonitorService {
 		return store.type().startsWith("fuse");
 	}
 
+	@Override
+	public Object getKeyByFile(File file) throws IOException {
+		return FileMonitors.getKeyByFile(file);
+	}
+
 }
