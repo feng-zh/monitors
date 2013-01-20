@@ -1,7 +1,14 @@
 package com.hp.it.perf.monitor.filemonitor;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -9,7 +16,13 @@ import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.zip.DeflaterOutputStream;
+import java.util.zip.InflaterInputStream;
 
 import javax.management.MBeanNotificationInfo;
 import javax.management.MBeanRegistration;
@@ -37,6 +50,12 @@ abstract class ManagedFileContentProvider extends
 
 	public static final String LINE_RECORD = DOMAIN + ".lineRecord";
 
+	private static final int BUFFER_SIZE = Integer.getInteger(
+			"monitor.content.notification.size", 200);
+
+	private static final int BUFFER_TIME = Integer.getInteger(
+			"monitor.content.notification.time", 2000);
+
 	private Map<ObjectName, ManagedFileContentProvider> managedFiles = new HashMap<ObjectName, ManagedFileContentProvider>();
 
 	private MBeanServer mbeanServer;
@@ -48,6 +67,23 @@ abstract class ManagedFileContentProvider extends
 	private int readLineCount;
 
 	private long readByteCount;
+
+	private boolean compressMode;
+
+	private LineRecordBuffer lineBuffer;
+
+	private static ScheduledExecutorService scheduler = Executors
+			.newSingleThreadScheduledExecutor(new ThreadFactory() {
+
+				@Override
+				public Thread newThread(Runnable r) {
+					Thread thread = Executors.defaultThreadFactory().newThread(
+							r);
+					thread.setDaemon(true);
+					thread.setName("Content Notification Timer");
+					return thread;
+				}
+			});
 
 	protected abstract String getProviderName();
 
@@ -97,10 +133,35 @@ abstract class ManagedFileContentProvider extends
 	}
 
 	protected LineRecord onLineRead(LineRecord line) {
-		Notification notification = new Notification(LINE_RECORD, this,
-				seq.incrementAndGet(), System.currentTimeMillis());
-		notification.setUserData(line);
-		sendNotification(notification);
+		if (compressMode) {
+			if (lineBuffer == null) {
+				lineBuffer = new LineRecordBuffer(BUFFER_SIZE, BUFFER_TIME,
+						new LineRecordBuffer.BufferHandler() {
+
+							@Override
+							public void handleBuffer(Queue<LineRecord> buffer) {
+								Notification notification = new Notification(
+										LINE_RECORD, this, seq
+												.incrementAndGet(), System
+												.currentTimeMillis());
+								notification
+										.setSource(ManagedFileContentProvider.this);
+								notification.setUserData(buffer);
+								sendNotification(notification);
+							}
+						}, scheduler);
+			}
+			lineBuffer.add(line);
+		} else {
+			if (lineBuffer != null) {
+				lineBuffer.flush();
+				lineBuffer = null;
+			}
+			Notification notification = new Notification(LINE_RECORD, this,
+					seq.incrementAndGet(), System.currentTimeMillis());
+			notification.setUserData(line);
+			sendNotification(notification);
+		}
 		readLineCount++;
 		readByteCount += line.getLine().length;
 		return line;
@@ -132,7 +193,25 @@ abstract class ManagedFileContentProvider extends
 						notif.getTimeStamp(), message);
 				notification.setUserData(NotificationInfoSerializer
 						.serializeLineRecord(line));
-				notif.setSource(notification);
+				notif.setUserData(notification);
+			} else if (notif.getUserData() instanceof Queue) {
+				@SuppressWarnings("unchecked")
+				Queue<LineRecord> lines = (Queue<LineRecord>) notif
+						.getUserData();
+				LineRecord line = new LineRecord();
+				// compressed flag
+				line.setProviderId(-1);
+				// lines
+				line.setLineNum(lines.size());
+				byte[] compressedLines = compressLines(lines);
+				line.setLine(compressedLines);
+				notification = new Notification(notif.getType(),
+						notif.getSource(), notif.getSequenceNumber(),
+						notif.getTimeStamp(), "Compressed lines - "
+								+ lines.size());
+				notification.setUserData(NotificationInfoSerializer
+						.serializeLineRecord(line));
+				notif.setUserData(notification);
 			} else if (notif.getUserData() instanceof Notification) {
 				notification = (Notification) notif.getUserData();
 			} else {
@@ -140,6 +219,50 @@ abstract class ManagedFileContentProvider extends
 			}
 		}
 		super.handleNotification(listener, notification, handback);
+	}
+
+	private byte[] compressLines(Queue<LineRecord> lines) {
+		ByteArrayOutputStream baOut = new ByteArrayOutputStream();
+		DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
+				new DeflaterOutputStream(baOut), 512));
+		try {
+			out.writeInt(lines.size());
+			LineRecord line;
+			while ((line = lines.poll()) != null) {
+				out.writeLong(line.getProviderId());
+				out.writeInt(line.getLineNum());
+				out.writeInt(line.getLine().length);
+				out.write(line.getLine());
+			}
+			out.close();
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
+		}
+		return baOut.toByteArray();
+	}
+
+	public List<LineRecord> decompressLines(byte[] bytes) {
+		try {
+			DataInputStream input = new DataInputStream(
+					new BufferedInputStream(new InflaterInputStream(
+							new ByteArrayInputStream(bytes))));
+			int size = input.readInt();
+			List<LineRecord> lines = new ArrayList<LineRecord>(size);
+			for (int i = 0; i < size; i++) {
+				LineRecord line = new LineRecord();
+				line.setProviderId(input.readLong());
+				line.setLineNum(input.readInt());
+				int lineLen = input.readInt();
+				byte[] lineBytes = new byte[lineLen];
+				input.readFully(lineBytes);
+				line.setLine(lineBytes);
+				lines.add(line);
+			}
+			input.close();
+			return lines;
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
+		}
 	}
 
 	public String getProviderType() {
@@ -256,5 +379,13 @@ abstract class ManagedFileContentProvider extends
 			log.warn("fail to unregister sub provider: " + subName, e);
 		}
 		managedFiles.remove(subName);
+	}
+
+	public void setCompressMode(boolean mode) {
+		compressMode = mode;
+	}
+
+	public boolean isCompressMode() {
+		return compressMode;
 	}
 }

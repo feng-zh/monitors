@@ -16,4 +16,8 @@ public interface CompositeContentProviderMXBean {
 	public long getReadByteCount();
 
 	public void close() throws IOException;
+	
+	public void setCompressMode(boolean mode);
+	
+	public boolean isCompressMode();
 }
