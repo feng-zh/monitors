@@ -3,7 +3,13 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.hp.it.perf.monitor</groupId>
 	<artifactId>file-monitor</artifactId>
-	<version>1.0.0-SNAPSHOT</version>
+	<version>1.0.0</version>
+	<parent>
+		<groupId>com.hp.it.perf.monitor</groupId>
+		<artifactId>components-pom</artifactId>
+		<version>1</version>
+		<relativePath>..</relativePath>
+	</parent>
 
 	<build>
 		<plugins>
