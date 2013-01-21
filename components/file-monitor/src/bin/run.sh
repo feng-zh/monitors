@@ -1,15 +1,24 @@
 #!/bin/sh
 
-classpath=patch
+PWD=`pwd`
+case $0 in
+/* )    MST_BIN_DIR=$0;;
+./* )   MST_BIN_DIR=$PWD/${0##./};;
+* )     MST_BIN_DIR=$PWD/$0;;
+esac
+MST_BIN_DIR=${MST_BIN_DIR%/*}
+echo "MST_BIN_DIR=${MST_BIN_DIR}"
 
-if [ -e "patch" ]; then
-for file in "`ls patch/*.jar`"; do
-	classpath=$classpath:$file
+classpath=$MST_BIN_DIR/patch
+
+if [ -e "$MST_BIN_DIR/patch" ]; then
+for file in "`ls $MST_BIN_DIR/patch/*.jar`"; do
+        classpath=$classpath:$file
 done
 fi
 
-for file in lib/*.jar; do
-	classpath=$classpath:$file
+for file in $MST_BIN_DIR/lib/*.jar; do
+        classpath=$classpath:$file
 done
 
 echo "CLASSPATH: $classpath"
