@@ -54,7 +54,7 @@ public class FileMonitorMain {
 			args = new String[] { "." };
 		}
 		boolean monitor = false;
-		UniqueFile.DefaultIdleTimeout = 60;
+		UniqueFile.DefaultIdleTimeout = 600;
 		UniqueFile.DefaultLazyOpen = true;
 		FileMonitorService monitorService = new MultiMonitorService();
 		CompositeContentProvider suite = new CompositeContentProvider();
