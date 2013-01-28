@@ -51,7 +51,7 @@ abstract class ManagedFileContentProvider extends
 	public static final String LINE_RECORD = DOMAIN + ".lineRecord";
 
 	private static final int BUFFER_SIZE = Integer.getInteger(
-			"monitor.content.notification.size", 200);
+			"monitor.content.notification.size", 1000);
 
 	private static final int BUFFER_TIME = Integer.getInteger(
 			"monitor.content.notification.time", 2000);
@@ -202,13 +202,13 @@ abstract class ManagedFileContentProvider extends
 				// compressed flag
 				line.setProviderId(-1);
 				// lines
-				line.setLineNum(lines.size());
+				int lineSize = lines.size();
+				line.setLineNum(lineSize);
 				byte[] compressedLines = compressLines(lines);
 				line.setLine(compressedLines);
 				notification = new Notification(notif.getType(),
 						notif.getSource(), notif.getSequenceNumber(),
-						notif.getTimeStamp(), "Compressed lines - "
-								+ lines.size());
+						notif.getTimeStamp(), "Compressed lines - " + lineSize);
 				notification.setUserData(NotificationInfoSerializer
 						.serializeLineRecord(line));
 				notif.setUserData(notification);
