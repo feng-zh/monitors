@@ -68,9 +68,11 @@ abstract class ManagedFileContentProvider extends
 
 	private long readByteCount;
 
-	private boolean compressMode;
+	private boolean compressMode = true;
 
 	private LineRecordBuffer lineBuffer;
+	
+	private boolean notificationEnabled = false;
 
 	private static ScheduledExecutorService scheduler = Executors
 			.newSingleThreadScheduledExecutor(new ThreadFactory() {
@@ -133,34 +135,42 @@ abstract class ManagedFileContentProvider extends
 	}
 
 	protected LineRecord onLineRead(LineRecord line) {
-		if (compressMode) {
-			if (lineBuffer == null) {
-				lineBuffer = new LineRecordBuffer(BUFFER_SIZE, BUFFER_TIME,
-						new LineRecordBuffer.BufferHandler() {
-
-							@Override
-							public void handleBuffer(Queue<LineRecord> buffer) {
-								Notification notification = new Notification(
-										LINE_RECORD, this, seq
-												.incrementAndGet(), System
-												.currentTimeMillis());
-								notification
-										.setSource(ManagedFileContentProvider.this);
-								notification.setUserData(buffer);
-								sendNotification(notification);
-							}
-						}, scheduler);
+		if (notificationEnabled) {
+			if (compressMode) {
+				if (lineBuffer == null) {
+					lineBuffer = new LineRecordBuffer(BUFFER_SIZE, BUFFER_TIME,
+							new LineRecordBuffer.BufferHandler() {
+	
+								@Override
+								public void handleBuffer(Queue<LineRecord> buffer) {
+									Notification notification = new Notification(
+											LINE_RECORD, this, seq
+													.incrementAndGet(), System
+													.currentTimeMillis());
+									notification
+											.setSource(ManagedFileContentProvider.this);
+									ArrayList<LineRecord> list = new ArrayList<LineRecord>(
+											buffer.size());
+									LineRecord line;
+									while ((line = buffer.poll()) != null) {
+										list.add(line);
+									}
+									notification.setUserData(list);
+									sendNotification(notification);
+								}
+							}, scheduler);
+				}
+				lineBuffer.add(line);
+			} else {
+				if (lineBuffer != null) {
+					lineBuffer.flush();
+					lineBuffer = null;
+				}
+				Notification notification = new Notification(LINE_RECORD, this,
+						seq.incrementAndGet(), System.currentTimeMillis());
+				notification.setUserData(line);
+				sendNotification(notification);
 			}
-			lineBuffer.add(line);
-		} else {
-			if (lineBuffer != null) {
-				lineBuffer.flush();
-				lineBuffer = null;
-			}
-			Notification notification = new Notification(LINE_RECORD, this,
-					seq.incrementAndGet(), System.currentTimeMillis());
-			notification.setUserData(line);
-			sendNotification(notification);
 		}
 		readLineCount++;
 		readByteCount += line.getLine().length;
@@ -194,10 +204,9 @@ abstract class ManagedFileContentProvider extends
 				notification.setUserData(NotificationInfoSerializer
 						.serializeLineRecord(line));
 				notif.setUserData(notification);
-			} else if (notif.getUserData() instanceof Queue) {
+			} else if (notif.getUserData() instanceof List) {
 				@SuppressWarnings("unchecked")
-				Queue<LineRecord> lines = (Queue<LineRecord>) notif
-						.getUserData();
+				List<LineRecord> lines = (List<LineRecord>) notif.getUserData();
 				LineRecord line = new LineRecord();
 				// compressed flag
 				line.setProviderId(-1);
@@ -221,14 +230,13 @@ abstract class ManagedFileContentProvider extends
 		super.handleNotification(listener, notification, handback);
 	}
 
-	private byte[] compressLines(Queue<LineRecord> lines) {
+	private byte[] compressLines(List<LineRecord> lines) {
 		ByteArrayOutputStream baOut = new ByteArrayOutputStream();
 		DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
 				new DeflaterOutputStream(baOut), 512));
 		try {
 			out.writeInt(lines.size());
-			LineRecord line;
-			while ((line = lines.poll()) != null) {
+			for (LineRecord line : lines) {
 				out.writeLong(line.getProviderId());
 				out.writeInt(line.getLineNum());
 				out.writeInt(line.getLine().length);
@@ -388,4 +396,13 @@ abstract class ManagedFileContentProvider extends
 	public boolean isCompressMode() {
 		return compressMode;
 	}
+
+	public boolean isNotificationEnabled() {
+		return notificationEnabled;
+	}
+
+	public void setNotificationEnabled(boolean notificationEnabled) {
+		this.notificationEnabled = notificationEnabled;
+	}
+	
 }

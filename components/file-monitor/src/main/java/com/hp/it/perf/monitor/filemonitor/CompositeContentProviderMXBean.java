@@ -20,4 +20,9 @@ public interface CompositeContentProviderMXBean {
 	public void setCompressMode(boolean mode);
 	
 	public boolean isCompressMode();
+	
+	public void setNotificationEnabled(boolean enabled);
+	
+	public boolean isNotificationEnabled();
+
 }

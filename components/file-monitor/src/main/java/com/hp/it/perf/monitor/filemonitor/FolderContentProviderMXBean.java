@@ -15,6 +15,14 @@ public interface FolderContentProviderMXBean {
 	public int getReadLineCount();
 	
 	public long getReadByteCount();
+	
+	public void setCompressMode(boolean mode);
+	
+	public boolean isCompressMode();
+	
+	public void setNotificationEnabled(boolean enabled);
+	
+	public boolean isNotificationEnabled();
 
 	public void close() throws IOException;
 
