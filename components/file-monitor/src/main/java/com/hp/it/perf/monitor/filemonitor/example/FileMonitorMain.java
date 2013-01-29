@@ -97,10 +97,10 @@ public class FileMonitorMain {
 			while ((line = suite.readLine()) != null) {
 				String fileName = getFileName(line.getProviderId(), suite);
 				if (fileName.equals(lastFileName)) {
-					System.out.print(".");
-					if (lastLineNo % 10 == 0) {
-						System.out.flush();
-					}
+					// System.out.print(".");
+					// if (lastLineNo % 10 == 0) {
+					// System.out.flush();
+					// }
 				} else {
 					if (lastFileName != null) {
 						// end last file
@@ -108,7 +108,8 @@ public class FileMonitorMain {
 					}
 					lastLineNo = 0;
 					lastFileName = fileName;
-					System.out.print("Monitor on " + fileName + ": .");
+					// System.out.print("Monitor on " + fileName + ": .");
+					System.out.print("Monitor on " + fileName + ": ");
 				}
 				lastLineNo++;
 			}
