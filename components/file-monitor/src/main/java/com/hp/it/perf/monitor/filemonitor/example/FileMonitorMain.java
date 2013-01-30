@@ -18,6 +18,9 @@ import javax.management.remote.JMXServiceURL;
 import javax.management.remote.rmi.RMIConnectorServer;
 import javax.naming.Context;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.hp.it.perf.monitor.filemonitor.CompositeContentProvider;
 import com.hp.it.perf.monitor.filemonitor.FileContentInfo;
 import com.hp.it.perf.monitor.filemonitor.FileContentProvider;
@@ -44,6 +47,9 @@ public class FileMonitorMain {
 	};
 
 	private static Map<Long, FileContentInfo> infos = new HashMap<Long, FileContentInfo>();
+
+	private static final Logger log = LoggerFactory
+			.getLogger(FileMonitorMain.class);
 
 	/**
 	 * @param args
@@ -96,20 +102,13 @@ public class FileMonitorMain {
 			int lastLineNo = 0;
 			while ((line = suite.readLine()) != null) {
 				String fileName = getFileName(line.getProviderId(), suite);
-				if (fileName.equals(lastFileName)) {
-					// System.out.print(".");
-					// if (lastLineNo % 10 == 0) {
-					// System.out.flush();
-					// }
-				} else {
+				if (!fileName.equals(lastFileName)) {
 					if (lastFileName != null) {
 						// end last file
-						System.out.println("(" + lastLineNo + ")");
+						log.info("{}: {}", lastFileName, lastLineNo);
 					}
 					lastLineNo = 0;
 					lastFileName = fileName;
-					// System.out.print("Monitor on " + fileName + ": .");
-					System.out.print("Monitor on " + fileName + ": ");
 				}
 				lastLineNo++;
 			}
@@ -138,7 +137,7 @@ public class FileMonitorMain {
 				.newJMXConnectorServer(new JMXServiceURL(serviceURL),
 						environment, ManagementFactory.getPlatformMBeanServer());
 		connectorServer.start();
-		System.out.printf("Target JMX Service URL is %s%n", serviceURL);
+		log.info("==> Target JMX Service URL is {}", serviceURL);
 	}
 
 	private static void refreshFiles(FileContentProvider suite)
