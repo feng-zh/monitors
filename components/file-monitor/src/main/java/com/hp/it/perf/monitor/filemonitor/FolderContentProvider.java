@@ -417,12 +417,12 @@ public class FolderContentProvider extends ManagedFileContentProvider implements
 	}
 
 	@Override
-	public List<FileContentInfo> getFileContentInfos(boolean realtime)
-			throws IOException {
+	public List<FileContentInfo> getFileContentInfos(boolean realtime,
+			boolean actived) throws IOException {
 		List<FileContentInfo> infos = new ArrayList<FileContentInfo>(
 				files.size());
 		for (FileContentProvider f : files) {
-			infos.addAll(f.getFileContentInfos(realtime));
+			infos.addAll(f.getFileContentInfos(realtime, actived));
 		}
 		return infos;
 	}

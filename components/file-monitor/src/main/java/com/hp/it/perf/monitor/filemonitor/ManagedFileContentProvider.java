@@ -89,8 +89,8 @@ abstract class ManagedFileContentProvider extends
 
 	protected abstract String getProviderName();
 
-	public abstract List<FileContentInfo> getFileContentInfos(boolean realtime)
-			throws IOException;
+	public abstract List<FileContentInfo> getFileContentInfos(boolean realtime,
+			boolean actived) throws IOException;
 
 	public abstract void close() throws IOException;
 

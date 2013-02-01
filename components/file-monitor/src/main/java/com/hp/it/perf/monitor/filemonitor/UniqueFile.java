@@ -58,6 +58,8 @@ public class UniqueFile extends ManagedFileContentProvider implements
 
 	private Object uniqueFileKey;
 
+	private long originalPosition;
+
 	private static class ContentUpdateChecker implements Observer {
 
 		private volatile long lastTickCount = 0;
@@ -313,8 +315,13 @@ public class UniqueFile extends ManagedFileContentProvider implements
 	}
 
 	@Override
-	public List<FileContentInfo> getFileContentInfos(boolean realtime)
-			throws IOException {
+	public List<FileContentInfo> getFileContentInfos(boolean realtime,
+			boolean actived) throws IOException {
+		if (actived) {
+			if (reader == null || reader.position() == originalPosition) {
+				return Collections.emptyList();
+			}
+		}
 		FileContentInfo info = new FileContentInfo();
 		info.setFileName(originalPath);
 		info.setCurrentFileName(currentFile == null ? null : currentFile
@@ -344,6 +351,7 @@ public class UniqueFile extends ManagedFileContentProvider implements
 		reader = new RandomAccessFileReader(file);
 		reader.setKeepAlive(idleTimeout);
 		reader.open(initOffset, lazyOpen);
+		originalPosition = reader.position();
 		originalPath = file.getPath();
 		log.trace("create random access file reader for file {}", file);
 		currentFile = file;
@@ -390,7 +398,7 @@ public class UniqueFile extends ManagedFileContentProvider implements
 	Object getUniqueFileKey() {
 		return uniqueFileKey;
 	}
-	
+
 	void setUniqueFileKey(Object uniqueFileKey) {
 		this.uniqueFileKey = uniqueFileKey;
 	}

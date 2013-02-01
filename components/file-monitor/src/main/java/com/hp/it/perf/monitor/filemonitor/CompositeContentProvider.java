@@ -194,12 +194,12 @@ public class CompositeContentProvider extends ManagedFileContentProvider
 	}
 
 	@Override
-	public List<FileContentInfo> getFileContentInfos(boolean realtime)
-			throws IOException {
+	public List<FileContentInfo> getFileContentInfos(boolean realtime,
+			boolean actived) throws IOException {
 		List<FileContentInfo> infos = new ArrayList<FileContentInfo>(
 				providers.size());
 		for (FileContentProvider f : providers) {
-			infos.addAll(f.getFileContentInfos(realtime));
+			infos.addAll(f.getFileContentInfos(realtime, actived));
 		}
 		return infos;
 	}

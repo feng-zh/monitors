@@ -142,7 +142,7 @@ public class FileMonitorMain {
 
 	private static void refreshFiles(FileContentProvider suite)
 			throws IOException {
-		for (FileContentInfo content : suite.getFileContentInfos(false)) {
+		for (FileContentInfo content : suite.getFileContentInfos(false, true)) {
 			infos.put(content.getProviderId(), content);
 		}
 	}

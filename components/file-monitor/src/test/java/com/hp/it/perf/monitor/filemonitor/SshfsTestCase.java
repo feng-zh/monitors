@@ -69,7 +69,7 @@ public class SshfsTestCase {
 		assertThat(line.getLine(), is(helper.line("line1")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		// prepare file content info
-		List<FileContentInfo> infos = folder.getFileContentInfos(false);
+		List<FileContentInfo> infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(1)));
 		int testFile1Index = 0;
 		assertThat(infos.get(testFile1Index).getCurrentFileName(),
@@ -80,7 +80,7 @@ public class SshfsTestCase {
 		helper.echo("line2", testFile1x);
 		// force wait for file watch
 		line = folder.readLine();
-		infos = folder.getFileContentInfos(false);
+		infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(1)));
 		assertThat(infos.get(testFile1Index).getCurrentFileName(),
 				is(equalTo(testFile1x.getPath())));
@@ -108,7 +108,7 @@ public class SshfsTestCase {
 		assertThat(line.getLine(), is(helper.line("line1")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		// prepare file content info
-		List<FileContentInfo> infos = folder.getFileContentInfos(false);
+		List<FileContentInfo> infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		int testFile1Index, testFile2Index;
 		if (infos.get(0).getFileName().equals(testFile1.getPath())) {
@@ -132,7 +132,7 @@ public class SshfsTestCase {
 		assertThat(line, is(notNullValue()));
 		assertThat(line.getLine(), is(helper.line("line2")));
 		assertThat(line.getLineNum(), is(equalTo(2)));
-		infos = folder.getFileContentInfos(false);
+		infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		assertThat(infos.get(testFile1Index).getCurrentFileName(),
 				is(equalTo(testFile1x.getPath())));
@@ -145,7 +145,7 @@ public class SshfsTestCase {
 		assertThat(line, is(notNullValue()));
 		assertThat(line.getLine(), is(helper.line("line3")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
-		infos = folder.getFileContentInfos(false);
+		infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		assertThat(infos.get(testFile1Index).getCurrentFileName(),
 				is(equalTo(testFile1x.getPath())));
@@ -186,7 +186,7 @@ public class SshfsTestCase {
 		assertThat(new String(line.getLine()), startsWith("line1"));
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		// prepare file content info
-		List<FileContentInfo> infos = folder.getFileContentInfos(false);
+		List<FileContentInfo> infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(4)));
 		Thread.sleep(1000L);
 		// start modify rename rotate
@@ -204,7 +204,7 @@ public class SshfsTestCase {
 			assertThat(new String(line.getLine()), startsWith("line"));
 		}
 		int len = folder.readLines(new LinkedList<LineRecord>(), 10);
-		infos = folder.getFileContentInfos(false);
+		infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(4)));
 		assertThat(len, is(equalTo(0)));
 		folder.close();
@@ -228,7 +228,7 @@ public class SshfsTestCase {
 		assertThat(line.getLine(), is(helper.line("line1")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		// prepare file content info
-		List<FileContentInfo> infos = folder.getFileContentInfos(false);
+		List<FileContentInfo> infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		int testFile1Index, testFile2Index;
 		if (infos.get(0).getFileName().equals(testFile1.getPath())) {
@@ -253,7 +253,7 @@ public class SshfsTestCase {
 		assertThat(line, is(notNullValue()));
 		assertThat(line.getLine(), is(helper.line("line2")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
-		infos = folder.getFileContentInfos(false);
+		infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		assertThat(infos.get(testFile1Index).getCurrentFileName(),
 				is(equalTo(testFile1x.getPath())));
@@ -278,7 +278,7 @@ public class SshfsTestCase {
 		assertThat(line.getLine(), is(helper.line("line1")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		// prepare file content info
-		List<FileContentInfo> infos = folder.getFileContentInfos(false);
+		List<FileContentInfo> infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(1)));
 		int testFile1Index = 0;
 		assertThat(infos.get(testFile1Index).getCurrentFileName(),
@@ -293,13 +293,13 @@ public class SshfsTestCase {
 		assertThat(line, is(notNullValue()));
 		assertThat(line.getLine(), is(helper.line("line2")));
 		assertThat(line.getLineNum(), is(equalTo(2)));
-		infos = folder.getFileContentInfos(false);
+		infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		line = folder.readLine();
 		assertThat(line, is(notNullValue()));
 		assertThat(line.getLine(), is(helper.line("line3")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
-		infos = folder.getFileContentInfos(false);
+		infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		// another
 		helper.echo("line4", testFile1);
@@ -308,7 +308,7 @@ public class SshfsTestCase {
 		assertThat(line, is(notNullValue()));
 		assertThat(line.getLine(), is(helper.line("line4")));
 		assertThat(line.getLineNum(), is(equalTo(2)));
-		infos = folder.getFileContentInfos(false);
+		infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		folder.close();
 	}
@@ -331,7 +331,7 @@ public class SshfsTestCase {
 		assertThat(line.getLine(), is(helper.line("line1")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		// prepare file content info
-		List<FileContentInfo> infos = folder.getFileContentInfos(false);
+		List<FileContentInfo> infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		int testFile1Index, testFile2Index;
 		if (infos.get(0).getFileName().equals(testFile1.getPath())) {
@@ -354,7 +354,7 @@ public class SshfsTestCase {
 		assertThat(line, is(notNullValue()));
 		assertThat(line.getLine(), is(helper.line("line2")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
-		infos = folder.getFileContentInfos(false);
+		infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		// another
 		helper.echo("line3", testFile1);
@@ -363,7 +363,7 @@ public class SshfsTestCase {
 		assertThat(line, is(notNullValue()));
 		assertThat(line.getLine(), is(helper.line("line3")));
 		assertThat(line.getLineNum(), is(equalTo(2)));
-		infos = folder.getFileContentInfos(false);
+		infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		folder.close();
 	}
@@ -386,7 +386,7 @@ public class SshfsTestCase {
 		assertThat(line.getLine(), is(helper.line("line1")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		// prepare file content info
-		List<FileContentInfo> infos = folder.getFileContentInfos(false);
+		List<FileContentInfo> infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		int testFile1Index, testFile2Index;
 		if (infos.get(0).getFileName().equals(testFile1.getPath())) {
@@ -408,7 +408,7 @@ public class SshfsTestCase {
 		assertThat(line, is(notNullValue()));
 		assertThat(line.getLine(), is(helper.line("line2")));
 		assertThat(line.getLineNum(), is(equalTo(2)));
-		infos = folder.getFileContentInfos(false);
+		infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(1)));
 		// another
 		helper.echo("line3", testFile1x);
@@ -417,7 +417,7 @@ public class SshfsTestCase {
 		assertThat(line, is(notNullValue()));
 		assertThat(line.getLine(), is(helper.line("line3")));
 		assertThat(line.getLineNum(), is(equalTo(3)));
-		infos = folder.getFileContentInfos(false);
+		infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(1)));
 		folder.close();
 	}

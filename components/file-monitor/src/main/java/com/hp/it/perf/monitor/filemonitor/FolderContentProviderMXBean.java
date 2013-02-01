@@ -9,11 +9,11 @@ public interface FolderContentProviderMXBean {
 
 	public String getFolderName();
 
-	public List<FileContentInfo> getFileContentInfos(boolean realtime)
-			throws IOException;
-	
+	public List<FileContentInfo> getFileContentInfos(boolean realtime,
+			boolean actived) throws IOException;
+
 	public int getReadLineCount();
-	
+
 	public long getReadByteCount();
 	
 	public void setCompressMode(boolean mode);

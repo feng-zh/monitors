@@ -46,9 +46,10 @@ public class FolderTestCase {
 	public void testFileRead() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
 		helper.registerClosable(folder);
-		File testFile1 = helper.copy(new File("src/test/data/sample_file1.txt"));
-		File testFile2 = helper.copy(new File("src/test/data/sample_file1.txt"),
-				"sample_file2.txt");
+		File testFile1 = helper
+				.copy(new File("src/test/data/sample_file1.txt"));
+		File testFile2 = helper.copy(
+				new File("src/test/data/sample_file1.txt"), "sample_file2.txt");
 		folder.setMonitorService(monitorService);
 		folder.setFolder(testFile1.getParentFile());
 		folder.setTailMode(true);
@@ -71,9 +72,10 @@ public class FolderTestCase {
 	public void testFileModifyReadTake() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
 		helper.registerClosable(folder);
-		File testFile1 = helper.copy(new File("src/test/data/sample_file1.txt"));
-		File testFile2 = helper.copy(new File("src/test/data/sample_file1.txt"),
-				"sample_file2.txt");
+		File testFile1 = helper
+				.copy(new File("src/test/data/sample_file1.txt"));
+		File testFile2 = helper.copy(
+				new File("src/test/data/sample_file1.txt"), "sample_file2.txt");
 		folder.setMonitorService(monitorService);
 		folder.setFolder(testFile1.getParentFile());
 		folder.setTailMode(true);
@@ -96,7 +98,8 @@ public class FolderTestCase {
 	public void testFileModifyReadPoll() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
 		helper.registerClosable(folder);
-		File testFile1 = helper.copy(new File("src/test/data/sample_file1.txt"));
+		File testFile1 = helper
+				.copy(new File("src/test/data/sample_file1.txt"));
 		folder.setMonitorService(monitorService);
 		folder.setFolder(testFile1.getParentFile());
 		folder.setTailMode(true);
@@ -143,9 +146,10 @@ public class FolderTestCase {
 	public void testReadLines() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
 		helper.registerClosable(folder);
-		File testFile1 = helper.copy(new File("src/test/data/sample_file1.txt"));
-		File testFile2 = helper.copy(new File("src/test/data/sample_file1.txt"),
-				"sample_file2.txt");
+		File testFile1 = helper
+				.copy(new File("src/test/data/sample_file1.txt"));
+		File testFile2 = helper.copy(
+				new File("src/test/data/sample_file1.txt"), "sample_file2.txt");
 		folder.setMonitorService(monitorService);
 		folder.setFolder(testFile1.getParentFile());
 		folder.setTailMode(true);
@@ -175,9 +179,10 @@ public class FolderTestCase {
 	public void testReadLinesQueueFull() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
 		helper.registerClosable(folder);
-		File testFile1 = helper.copy(new File("src/test/data/sample_file1.txt"));
-		File testFile2 = helper.copy(new File("src/test/data/sample_file1.txt"),
-				"sample_file2.txt");
+		File testFile1 = helper
+				.copy(new File("src/test/data/sample_file1.txt"));
+		File testFile2 = helper.copy(
+				new File("src/test/data/sample_file1.txt"), "sample_file2.txt");
 		folder.setMonitorService(monitorService);
 		folder.setFolder(testFile1.getParentFile());
 		folder.setTailMode(true);
@@ -206,7 +211,8 @@ public class FolderTestCase {
 	public void testGetContent() throws Exception {
 		FolderContentProvider folder = new FolderContentProvider();
 		helper.registerClosable(folder);
-		File testFile1 = helper.copy(new File("src/test/data/sample_file1.txt"));
+		File testFile1 = helper
+				.copy(new File("src/test/data/sample_file1.txt"));
 		String testFileName1 = testFile1.getPath();
 		folder.setMonitorService(monitorService);
 		folder.setFolder(testFile1.getParentFile());
@@ -216,7 +222,8 @@ public class FolderTestCase {
 		helper.echo(data, testFile1);
 		LineRecord line = folder.readLine(3, TimeUnit.SECONDS);
 		assertThat(line, is(notNullValue()));
-		List<FileContentInfo> contentInfos = folder.getFileContentInfos(false);
+		List<FileContentInfo> contentInfos = folder.getFileContentInfos(false,
+				false);
 		assertThat(contentInfos, is(notNullValue()));
 		assertThat(contentInfos.size(), is(equalTo(1)));
 		FileContentInfo info = contentInfos.get(0);
@@ -226,7 +233,7 @@ public class FolderTestCase {
 		assertThat(info.getProviderId(), is(not(equalTo(0L))));
 		assertThat(info.getProviderId(), is(equalTo(line.getProviderId())));
 		// realtime info
-		contentInfos = folder.getFileContentInfos(true);
+		contentInfos = folder.getFileContentInfos(true, false);
 		assertThat(contentInfos, is(notNullValue()));
 		assertThat(contentInfos.size(), is(equalTo(1)));
 		info = contentInfos.get(0);
@@ -248,9 +255,10 @@ public class FolderTestCase {
 		}
 		FolderContentProvider folder = new FolderContentProvider();
 		helper.registerClosable(folder);
-		File testFile1 = helper.copy(new File("src/test/data/sample_file1.txt"));
-		File testFile2 = helper.copy(new File("src/test/data/sample_file1.txt"),
-				"sample_file2.txt");
+		File testFile1 = helper
+				.copy(new File("src/test/data/sample_file1.txt"));
+		File testFile2 = helper.copy(
+				new File("src/test/data/sample_file1.txt"), "sample_file2.txt");
 		folder.setMonitorService(monitorService);
 		folder.setFolder(testFile1.getParentFile());
 		folder.setTailMode(true);
@@ -261,7 +269,7 @@ public class FolderTestCase {
 		assertThat(line.getLine(), is(helper.line("line1")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		// prepare file content info
-		List<FileContentInfo> infos = folder.getFileContentInfos(false);
+		List<FileContentInfo> infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		int testFile1Index, testFile2Index;
 		if (infos.get(0).getFileName().equals(testFile1.getPath())) {
@@ -285,7 +293,7 @@ public class FolderTestCase {
 		assertThat(line, is(notNullValue()));
 		assertThat(line.getLine(), is(helper.line("line2")));
 		assertThat(line.getLineNum(), is(equalTo(2)));
-		infos = folder.getFileContentInfos(false);
+		infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		assertThat(infos.get(testFile1Index).getCurrentFileName(),
 				is(equalTo(testFile1x.getPath())));
@@ -298,7 +306,7 @@ public class FolderTestCase {
 		assertThat(line, is(notNullValue()));
 		assertThat(line.getLine(), is(helper.line("line3")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
-		infos = folder.getFileContentInfos(false);
+		infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		assertThat(infos.get(testFile1Index).getCurrentFileName(),
 				is(equalTo(testFile1x.getPath())));
@@ -314,9 +322,10 @@ public class FolderTestCase {
 		}
 		FolderContentProvider folder = new FolderContentProvider();
 		helper.registerClosable(folder);
-		File testFile1 = helper.copy(new File("src/test/data/sample_file1.txt"));
-		File testFile2 = helper.copy(new File("src/test/data/sample_file1.txt"),
-				"sample_file2.txt");
+		File testFile1 = helper
+				.copy(new File("src/test/data/sample_file1.txt"));
+		File testFile2 = helper.copy(
+				new File("src/test/data/sample_file1.txt"), "sample_file2.txt");
 		folder.setMonitorService(monitorService);
 		folder.setFolder(testFile1.getParentFile());
 		folder.setTailMode(true);
@@ -327,7 +336,7 @@ public class FolderTestCase {
 		assertThat(line.getLine(), is(helper.line("line1")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		// prepare file content info
-		List<FileContentInfo> infos = folder.getFileContentInfos(false);
+		List<FileContentInfo> infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		int testFile1Index, testFile2Index;
 		if (infos.get(0).getFileName().equals(testFile1.getPath())) {
@@ -351,7 +360,7 @@ public class FolderTestCase {
 		assertThat(line, is(notNullValue()));
 		assertThat(line.getLine(), is(helper.line("line2")));
 		assertThat(line.getLineNum(), is(equalTo(2)));
-		infos = folder.getFileContentInfos(false);
+		infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		assertThat(infos.get(testFile1Index).getCurrentFileName(),
 				is(equalTo(testFile1x.getPath())));
@@ -364,7 +373,7 @@ public class FolderTestCase {
 		assertThat(line, is(notNullValue()));
 		assertThat(line.getLine(), is(helper.line("line3")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
-		infos = folder.getFileContentInfos(false);
+		infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		assertThat(infos.get(testFile1Index).getCurrentFileName(),
 				is(equalTo(testFile1x.getPath())));
@@ -388,7 +397,7 @@ public class FolderTestCase {
 		assertThat(line, is(notNullValue()));
 		assertThat(line.getLine(), is(helper.line("line1")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
-		FileContentInfo info = folder.getFileContentInfos(false).get(0);
+		FileContentInfo info = folder.getFileContentInfos(false, false).get(0);
 		assertThat(info, is(notNullValue()));
 		assertThat(info.getFileName(), is(equalTo(testFileName)));
 		assertThat(info.getCurrentFileName(), is(equalTo(testFileName)));
@@ -397,7 +406,7 @@ public class FolderTestCase {
 		// force wait for file watch
 		line = folder.readLine();
 		assertThat(line, is(nullValue()));
-		List<FileContentInfo> infos = folder.getFileContentInfos(true);
+		List<FileContentInfo> infos = folder.getFileContentInfos(true, false);
 		assertThat(infos.isEmpty(), is(true));
 		folder.close();
 	}
@@ -409,9 +418,10 @@ public class FolderTestCase {
 		}
 		FolderContentProvider folder = new FolderContentProvider();
 		helper.registerClosable(folder);
-		File testFile1 = helper.copy(new File("src/test/data/sample_file1.txt"));
-		File testFile2 = helper.copy(new File("src/test/data/sample_file1.txt"),
-				"sample_file2.txt");
+		File testFile1 = helper
+				.copy(new File("src/test/data/sample_file1.txt"));
+		File testFile2 = helper.copy(
+				new File("src/test/data/sample_file1.txt"), "sample_file2.txt");
 		folder.setMonitorService(monitorService);
 		folder.setFolder(testFile1.getParentFile());
 		folder.setTailMode(true);
@@ -422,7 +432,7 @@ public class FolderTestCase {
 		assertThat(line.getLine(), is(helper.line("line1")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
 		// prepare file content info
-		List<FileContentInfo> infos = folder.getFileContentInfos(false);
+		List<FileContentInfo> infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		int testFile1Index, testFile2Index;
 		if (infos.get(0).getFileName().equals(testFile1.getPath())) {
@@ -447,7 +457,7 @@ public class FolderTestCase {
 		line = folder.readLine();
 		assertThat(line, is(notNullValue()));
 		Thread.sleep(1000L);
-		infos = folder.getFileContentInfos(false);
+		infos = folder.getFileContentInfos(false, false);
 		assertThat(infos.size(), is(equalTo(2)));
 		folder.close();
 	}

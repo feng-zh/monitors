@@ -42,7 +42,7 @@ public interface FileContentProvider extends Closeable {
 
 	// information
 	// include providerId, original name, last event, current name, file key
-	public List<FileContentInfo> getFileContentInfos(boolean realtime)
-			throws IOException;
+	public List<FileContentInfo> getFileContentInfos(boolean realtime,
+			boolean actived) throws IOException;
 
 }

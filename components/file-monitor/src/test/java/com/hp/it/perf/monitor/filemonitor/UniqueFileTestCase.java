@@ -213,7 +213,8 @@ public class UniqueFileTestCase {
 		helper.echo(data, testFile);
 		LineRecord line = file.readLine(1, TimeUnit.MILLISECONDS);
 		assertThat(line, is(notNullValue()));
-		List<FileContentInfo> contentInfos = file.getFileContentInfos(false);
+		List<FileContentInfo> contentInfos = file.getFileContentInfos(false,
+				false);
 		assertThat(contentInfos, is(notNullValue()));
 		assertThat(contentInfos.size(), is(equalTo(1)));
 		FileContentInfo info = contentInfos.get(0);
@@ -223,7 +224,7 @@ public class UniqueFileTestCase {
 		assertThat(info.getProviderId(), is(not(equalTo(0L))));
 		assertThat(info.getProviderId(), is(equalTo(line.getProviderId())));
 		// realtime info
-		contentInfos = file.getFileContentInfos(true);
+		contentInfos = file.getFileContentInfos(true, false);
 		assertThat(contentInfos, is(notNullValue()));
 		assertThat(contentInfos.size(), is(equalTo(1)));
 		info = contentInfos.get(0);
@@ -310,7 +311,7 @@ public class UniqueFileTestCase {
 		assertThat(line, is(notNullValue()));
 		assertThat(line.getLine(), is(helper.line("line1")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
-		FileContentInfo info = file.getFileContentInfos(false).get(0);
+		FileContentInfo info = file.getFileContentInfos(false, false).get(0);
 		assertThat(info, is(notNullValue()));
 		assertThat(info.getFileName(), is(equalTo(testFileName)));
 		assertThat(info.getCurrentFileName(), is(equalTo(testFileName)));
@@ -325,7 +326,7 @@ public class UniqueFileTestCase {
 		assertThat(line.getLine(), is(helper.line("line2")));
 		assertThat(line.getLineNum(), is(equalTo(2)));
 		Thread.sleep(2000L);
-		info = file.getFileContentInfos(false).get(0);
+		info = file.getFileContentInfos(false, false).get(0);
 		assertThat(info, is(notNullValue()));
 		assertThat(info.getFileName(), is(equalTo(testFileName)));
 		assertThat(info.getCurrentFileName(), is(equalTo(testFile2Name)));
@@ -348,7 +349,7 @@ public class UniqueFileTestCase {
 		assertThat(line, is(notNullValue()));
 		assertThat(line.getLine(), is(helper.line("line1")));
 		assertThat(line.getLineNum(), is(equalTo(1)));
-		FileContentInfo info = file.getFileContentInfos(false).get(0);
+		FileContentInfo info = file.getFileContentInfos(false, false).get(0);
 		assertThat(info, is(notNullValue()));
 		assertThat(info.getFileName(), is(equalTo(testFileName)));
 		assertThat(info.getCurrentFileName(), is(equalTo(testFileName)));
@@ -357,7 +358,7 @@ public class UniqueFileTestCase {
 		// force wait for file watch
 		line = file.readLine();
 		assertThat(line, is(nullValue()));
-		info = file.getFileContentInfos(true).get(0);
+		info = file.getFileContentInfos(true, false).get(0);
 		assertThat(info, is(notNullValue()));
 		assertThat(info.getFileName(), is(equalTo(testFileName)));
 		assertThat(info.getCurrentFileName(), is(nullValue()));
