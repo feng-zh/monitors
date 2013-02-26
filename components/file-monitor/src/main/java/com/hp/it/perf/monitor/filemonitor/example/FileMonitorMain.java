@@ -154,7 +154,7 @@ public class FileMonitorMain {
 			refreshFiles(suite);
 		}
 		info = infos.get(providerId);
-		if (info == null) {
+		if (info == null || info.getCurrentFileName() == null) {
 			return "[UNKOWN FILE]";
 		} else {
 			return info.getCurrentFileName();
