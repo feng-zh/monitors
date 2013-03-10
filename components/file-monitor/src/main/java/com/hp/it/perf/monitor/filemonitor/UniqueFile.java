@@ -39,6 +39,8 @@ public class UniqueFile extends ManagedFileContentProvider implements
 	private boolean lazyOpen = DefaultLazyOpen;
 
 	private String originalPath;
+	
+	private String originalRealPath;
 
 	private RandomAccessFileReader reader;
 
@@ -324,6 +326,7 @@ public class UniqueFile extends ManagedFileContentProvider implements
 		}
 		FileContentInfo info = new FileContentInfo();
 		info.setFileName(originalPath);
+		info.setRealPath(originalRealPath);
 		info.setCurrentFileName(currentFile == null ? null : currentFile
 				.getPath());
 		info.setProviderId(providerId);
@@ -353,6 +356,7 @@ public class UniqueFile extends ManagedFileContentProvider implements
 		reader.open(initOffset, lazyOpen);
 		originalPosition = reader.position();
 		originalPath = file.getPath();
+		originalRealPath = file.getCanonicalPath();
 		log.trace("create random access file reader for file {}", file);
 		currentFile = file;
 		if (monitorService != null) {

@@ -11,6 +11,8 @@ public class FileContentInfo implements Serializable {
 	private long providerId;
 
 	private String currentFileName;
+	
+	private String realPath;
 
 	private long offset;
 
@@ -67,4 +69,12 @@ public class FileContentInfo implements Serializable {
 		this.currentFileName = currentFileName;
 	}
 
+	public String getRealPath() {
+		return realPath;
+	}
+
+	public void setRealPath(String realPath) {
+		this.realPath = realPath;
+	}
+	
 }
