@@ -92,6 +92,12 @@ abstract class ManagedFileContentProvider extends
 	public abstract List<FileContentInfo> getFileContentInfos(boolean realtime,
 			boolean actived) throws IOException;
 
+	@Deprecated
+	public List<FileContentInfo> getFileContentInfos(boolean realtime)
+			throws IOException {
+		return getFileContentInfos(realtime, true);
+	}
+	
 	public abstract void close() throws IOException;
 
 	protected ManagedFileContentProvider() {
