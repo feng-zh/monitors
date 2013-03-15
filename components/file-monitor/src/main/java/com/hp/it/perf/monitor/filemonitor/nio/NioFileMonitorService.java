@@ -171,9 +171,11 @@ public class NioFileMonitorService implements Runnable, FileMonitorService {
 				}
 			}
 		} catch (Throwable t) {
-			log.error("got error on monitor thread", t);
+			log.error("got error on monitor thread " + Thread.currentThread(),
+					t);
 		} finally {
-			log.info("exit monitor thread");
+			log.info("exit monitor thread: {}", Thread.currentThread()
+					.getName());
 		}
 	}
 

@@ -362,7 +362,7 @@ public class RandomAccessFileReader implements Closeable {
 				open0();
 			} catch (FileNotFoundException e) {
 				// file renamed or deleted
-				log.info("file cannot open: {}", e.getMessage());
+				log.info("file '{}' cannot open: {}", file, e.getMessage());
 				return null;
 			}
 		}

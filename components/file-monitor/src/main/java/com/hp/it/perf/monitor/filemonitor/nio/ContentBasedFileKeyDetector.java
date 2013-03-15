@@ -100,9 +100,11 @@ public class ContentBasedFileKeyDetector implements FileKeyDetector {
 			} catch (IOException e) {
 				length = -1;
 			} finally {
-				try {
-					file.close();
-				} catch (IOException ignored) {
+				if (file != null) {
+					try {
+						file.close();
+					} catch (IOException ignored) {
+					}
 				}
 			}
 		}
