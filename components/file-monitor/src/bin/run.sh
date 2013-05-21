@@ -21,6 +21,10 @@ for file in $MST_BIN_DIR/lib/*.jar; do
         classpath=$classpath:$file
 done
 
-echo "CLASSPATH: $classpath"
+export CLASSPATH=$classpath
 
-/usr/java/latest/bin/java -classpath $classpath -Dmonitor.nio.slow=true com.hp.it.perf.monitor.filemonitor.example.FileMonitorMain "$@"
+echo "CLASSPATH: $CLASSPATH"
+
+echo "JAVA_OPTS: $JAVA_OPTS"
+
+/usr/java/latest/bin/java -Dmonitor.nio.slow=true $JAVA_OPTS com.hp.it.perf.monitor.filemonitor.example.FileMonitorMain "$@"
