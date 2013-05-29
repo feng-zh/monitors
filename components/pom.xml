@@ -63,5 +63,6 @@
 	</repositories>
 	<modules>
 		<module>file-monitor</module>
+		<module>file-binary-search</module>
 	</modules>
 </project>
