@@ -25,10 +25,18 @@ import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 
+import com.hp.it.perf.monitor.config.ConfigEnum;
+import com.hp.it.perf.monitor.config.ErrorMonitorConfig;
+
 public class ErrorMonitorMain implements NotificationListener {
 
 	private Map<Long, ContentInfo> contents = new HashMap<Long, ContentInfo>();
-
+	private Map<String, ErrorMonitorConfig> configs = null;
+	
+	public ErrorMonitorMain(Map<String, ErrorMonitorConfig> config){
+		this.configs = config;
+	}
+	
 	public static interface ContentProvider {
 
 		public String[] getFileNames();
@@ -230,6 +238,9 @@ public class ErrorMonitorMain implements NotificationListener {
 
 	@Override
 	public void handleNotification(Notification notification, Object handback) {
+		ErrorMonitorConfig contentCofig = this.configs.get(ConfigEnum.CONTENTCONFIG.toString());
+		ErrorMonitorConfig fileNameConfig = this.configs.get(ConfigEnum.FILENAMECONFIG.toString());
+		
 		ContentProvider provider = (ContentProvider) handback;
 		LineRecord lineRecord = LineRecord.from((CompositeData) notification
 				.getUserData());
@@ -265,10 +276,8 @@ public class ErrorMonitorMain implements NotificationListener {
 			if (newline.endsWith("\n")) {
 				newline = newline.substring(0, newline.length() - 1);
 			}
-			if (newline != null && newline.toLowerCase().contains("error")) {
-				if (fileName.contains("sp4tsdiag")) {
-					continue;
-				}
+			
+			if(contentCofig.isChecked(newline) && fileNameConfig.isChecked(newline)){
 				System.out.println(fileName + "[" + line.getLineNum() + "]: "
 						+ newline);
 			}
@@ -276,7 +285,19 @@ public class ErrorMonitorMain implements NotificationListener {
 	}
 
 	public static void main(String[] args) throws Exception {
-		new ErrorMonitorMain()
+		List<String> in = new ArrayList<String>(1);
+		in.add("error");
+		List<String> out = new ArrayList<String>(1);
+		out.add("sp4tsdiag");
+		
+		ErrorMonitorConfig content = new ErrorMonitorConfig(in, null, false);
+		ErrorMonitorConfig filename = new ErrorMonitorConfig(null, out, true);
+		
+		Map<String, ErrorMonitorConfig> configs = new HashMap<String, ErrorMonitorConfig>();
+		configs.put(ConfigEnum.CONTENTCONFIG.toString(), content);
+		configs.put(ConfigEnum.FILENAMECONFIG.toString(), content);
+		
+		new ErrorMonitorMain(configs)
 				.monitor(new JMXServiceURL(
 						"service:jmx:rmi:///jndi/rmi://d6t0009g.atlanta.hp.com:12099/filemonitor"));
 	}
