@@ -27,6 +27,7 @@ import javax.management.remote.JMXServiceURL;
 
 import com.hp.it.perf.monitor.config.ConfigEnum;
 import com.hp.it.perf.monitor.config.ErrorMonitorConfig;
+import com.hp.it.perf.monitor.config.ErrorMonitorConfigMXBean;
 
 public class ErrorMonitorMain implements NotificationListener {
 
@@ -238,8 +239,8 @@ public class ErrorMonitorMain implements NotificationListener {
 
 	@Override
 	public void handleNotification(Notification notification, Object handback) {
-		ErrorMonitorConfig contentCofig = this.configs.get(ConfigEnum.CONTENTCONFIG.toString());
-		ErrorMonitorConfig fileNameConfig = this.configs.get(ConfigEnum.FILENAMECONFIG.toString());
+		ErrorMonitorConfigMXBean contentCofig = this.configs.get(ConfigEnum.CONTENTCONFIG.toString());
+		ErrorMonitorConfigMXBean fileNameConfig = this.configs.get(ConfigEnum.FILENAMECONFIG.toString());
 		
 		ContentProvider provider = (ContentProvider) handback;
 		LineRecord lineRecord = LineRecord.from((CompositeData) notification
@@ -291,7 +292,7 @@ public class ErrorMonitorMain implements NotificationListener {
 		out.add("sp4tsdiag");
 		
 		ErrorMonitorConfig content = new ErrorMonitorConfig(in, null, false);
-		ErrorMonitorConfig filename = new ErrorMonitorConfig(null, out, true);
+		ErrorMonitorConfigMXBean filename = new ErrorMonitorConfig(null, out, true);
 		
 		Map<String, ErrorMonitorConfig> configs = new HashMap<String, ErrorMonitorConfig>();
 		configs.put(ConfigEnum.CONTENTCONFIG.toString(), content);
