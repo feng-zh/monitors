@@ -5,6 +5,7 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -15,6 +16,7 @@ import java.util.zip.InflaterInputStream;
 
 import javax.management.JMException;
 import javax.management.JMX;
+import javax.management.MBeanServer;
 import javax.management.MBeanServerConnection;
 import javax.management.Notification;
 import javax.management.NotificationEmitter;
@@ -26,15 +28,18 @@ import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 
 import com.hp.it.perf.monitor.config.ConfigEnum;
+import com.hp.it.perf.monitor.config.ConnectConfig;
+import com.hp.it.perf.monitor.config.ConnectConfigEnum;
+import com.hp.it.perf.monitor.config.ConnectConfigMXBean;
 import com.hp.it.perf.monitor.config.ErrorMonitorConfig;
 import com.hp.it.perf.monitor.config.ErrorMonitorConfigMXBean;
 
 public class ErrorMonitorMain implements NotificationListener {
 
 	private Map<Long, ContentInfo> contents = new HashMap<Long, ContentInfo>();
-	private Map<String, ErrorMonitorConfig> configs = null;
+	private Map<String, ErrorMonitorConfigMXBean> configs = null;
 	
-	public ErrorMonitorMain(Map<String, ErrorMonitorConfig> config){
+	public ErrorMonitorMain(Map<String, ErrorMonitorConfigMXBean> config){
 		this.configs = config;
 	}
 	
@@ -291,16 +296,30 @@ public class ErrorMonitorMain implements NotificationListener {
 		List<String> out = new ArrayList<String>(1);
 		out.add("sp4tsdiag");
 		
-		ErrorMonitorConfig content = new ErrorMonitorConfig(in, null, false);
+		ErrorMonitorConfigMXBean content = new ErrorMonitorConfig(in, null, false);
 		ErrorMonitorConfigMXBean filename = new ErrorMonitorConfig(null, out, true);
 		
-		Map<String, ErrorMonitorConfig> configs = new HashMap<String, ErrorMonitorConfig>();
+		ConnectConfigMXBean conConfig = new ConnectConfig();
+		conConfig.put(ConnectConfigEnum.SERVICEURL.toString(), "service:jmx:rmi:///jndi/rmi://d6t0009g.atlanta.hp.com:12099/filemonitor");
+
+		MBeanServer mbs = 
+	            ManagementFactory.getPlatformMBeanServer(); 
+	                 
+		ObjectName contentBeanName = new ObjectName("com.hp.it.perf.monitor.config:type=ContentErrorMonitorConfig");
+		ObjectName fileNameBeanName = new ObjectName("com.hp.it.perf.monitor.config:type=FileNameErrorMonitorConfig");
+		ObjectName connectConfigBeanName = new ObjectName("com.hp.it.perf.monitor.config:type=ConnectionConfig");
+
+		mbs.registerMBean(content, contentBeanName);
+		mbs.registerMBean(filename, fileNameBeanName);
+		mbs.registerMBean(conConfig, connectConfigBeanName);
+		
+		Map<String, ErrorMonitorConfigMXBean> configs = new HashMap<String, ErrorMonitorConfigMXBean>();
 		configs.put(ConfigEnum.CONTENTCONFIG.toString(), content);
 		configs.put(ConfigEnum.FILENAMECONFIG.toString(), content);
 		
+		
 		new ErrorMonitorMain(configs)
-				.monitor(new JMXServiceURL(
-						"service:jmx:rmi:///jndi/rmi://d6t0009g.atlanta.hp.com:12099/filemonitor"));
+				.monitor(new JMXServiceURL(conConfig.getConfigs().get(ConnectConfigEnum.SERVICEURL.toString())));
 	}
 
 }
