@@ -317,6 +317,9 @@ public class ErrorMonitorMain implements NotificationListener {
 	public static void main(String[] args) throws Exception {
 		List<String> in = new ArrayList<String>(1);
 		in.add("error");
+		in.add("ERROR");
+		in.add("fatal");
+		in.add("FATAL");
 		List<String> out = new ArrayList<String>(1);
 		out.add("sp4tsdiag");
 		
