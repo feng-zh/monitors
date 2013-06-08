@@ -41,6 +41,8 @@ public class ErrorMonitorMain implements NotificationListener {
 	private Map<Long, ContentInfo> contents = new HashMap<Long, ContentInfo>();
 	private Map<String, ErrorMonitorConfigMXBean> configs = null;
 	
+	private String lastFileName;
+	
 	//private Semaphore semaphore = new Semaphore(0);
 	
 	
@@ -287,6 +289,7 @@ public class ErrorMonitorMain implements NotificationListener {
 			} else {
 				fileName = "Unkown";
 			}
+			
 			String newline;
 			try {
 				newline = new String(line.getLine(), "UTF-8");
@@ -299,7 +302,13 @@ public class ErrorMonitorMain implements NotificationListener {
 			}
 			
 			if(contentCofig.isChecked(newline) && fileNameConfig.isChecked(newline)){
-				System.out.println(fileName + "[" + line.getLineNum() + "]: "
+				if(!fileName.equals(lastFileName)){
+					lastFileName = fileName;
+					System.out.println();
+					System.out.println("--- "+lastFileName+" ---");
+					
+				}
+				System.out.println( "[" + line.getLineNum() + "]: "
 						+ newline);
 			}
 		}
