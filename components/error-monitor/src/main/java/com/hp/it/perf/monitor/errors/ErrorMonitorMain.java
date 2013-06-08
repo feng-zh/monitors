@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Semaphore;
 import java.util.zip.InflaterInputStream;
 
 import javax.management.JMException;
@@ -33,11 +34,15 @@ import com.hp.it.perf.monitor.config.ConnectConfigEnum;
 import com.hp.it.perf.monitor.config.ConnectConfigMXBean;
 import com.hp.it.perf.monitor.config.ErrorMonitorConfig;
 import com.hp.it.perf.monitor.config.ErrorMonitorConfigMXBean;
+import com.hp.it.perf.monitor.runer.ErrorMonitorExecuter;
 
 public class ErrorMonitorMain implements NotificationListener {
 
 	private Map<Long, ContentInfo> contents = new HashMap<Long, ContentInfo>();
 	private Map<String, ErrorMonitorConfigMXBean> configs = null;
+	
+	//private Semaphore semaphore = new Semaphore(0);
+	
 	
 	public ErrorMonitorMain(Map<String, ErrorMonitorConfigMXBean> config){
 		this.configs = config;
@@ -192,6 +197,7 @@ public class ErrorMonitorMain implements NotificationListener {
 
 	public void monitor(JMXServiceURL monitorURL) throws IOException,
 			InterruptedException, JMException {
+		
 		JMXConnector connector = JMXConnectorFactory.connect(monitorURL);
 		MBeanServerConnection mbsc = connector.getMBeanServerConnection();
 		System.out.println("===> Connected to monitor server: " + monitorURL);
@@ -213,11 +219,20 @@ public class ErrorMonitorMain implements NotificationListener {
 		// contentProvider.setNotificationEnabled(true);
 		((NotificationEmitter) contentProvider).addNotificationListener(this,
 				null, contentProvider);
+
 		synchronized (contentProvider) {
-			contentProvider.wait();
+			try{
+				contentProvider.wait();
+			}catch(InterruptedException interrupt){
+				interrupt.printStackTrace();
+				connector.close();
+			}finally{
+				connector.close();
+			}
 		}
 	}
-
+	
+	
 	public List<LineRecord> decompressLines(byte[] bytes) {
 		try {
 			DataInputStream input = new DataInputStream(
@@ -317,9 +332,29 @@ public class ErrorMonitorMain implements NotificationListener {
 		configs.put(ConfigEnum.CONTENTCONFIG.toString(), content);
 		configs.put(ConfigEnum.FILENAMECONFIG.toString(), content);
 		
+		String monitorConnection = conConfig.getConfigs().get(ConnectConfigEnum.SERVICEURL.toString());
 		
-		new ErrorMonitorMain(configs)
-				.monitor(new JMXServiceURL(conConfig.getConfigs().get(ConnectConfigEnum.SERVICEURL.toString())));
+		Thread runThread = new ErrorMonitorExecuter(configs, conConfig);
+		runThread.start();
+		
+		while(true){
+			Thread.sleep(5000);
+			
+			String newConnection = conConfig.getConfigs().get(ConnectConfigEnum.SERVICEURL.toString());
+			if(newConnection != null && !newConnection.equalsIgnoreCase(monitorConnection)){
+				monitorConnection = newConnection;
+				
+				runThread.interrupt();
+				Thread.sleep(1000);
+				runThread = new ErrorMonitorExecuter(configs, conConfig);
+				runThread.start();
+			}else if(newConnection == null || newConnection.trim().isEmpty()){
+				
+				runThread.interrupt();
+				
+				System.exit(0);
+			}
+		}
 	}
 
 }

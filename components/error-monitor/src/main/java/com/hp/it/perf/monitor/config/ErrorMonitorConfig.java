@@ -47,7 +47,7 @@ public class ErrorMonitorConfig implements ErrorMonitorConfigMXBean {
 		}else{
 			if(includes != null && !includes.isEmpty()){
 				for(String in: includes){
-					if(s.toLowerCase().contains(in)){
+					if(s.contains(in)){
 						result = true;
 						break;
 					}
@@ -57,7 +57,7 @@ public class ErrorMonitorConfig implements ErrorMonitorConfigMXBean {
 		
 		if(result && excludes != null && !excludes.isEmpty()){
 			for(String out: excludes){
-				if(s.toLowerCase().contains(out)){
+				if(s.contains(out)){
 					result = false;
 					break;
 				}
