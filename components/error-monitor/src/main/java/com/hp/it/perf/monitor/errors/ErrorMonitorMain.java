@@ -301,7 +301,7 @@ public class ErrorMonitorMain implements NotificationListener {
 				newline = newline.substring(0, newline.length() - 1);
 			}
 			
-			if(contentCofig.isChecked(newline) && fileNameConfig.isChecked(newline)){
+			if(contentCofig.isChecked(newline) && fileNameConfig.isChecked(fileName)){
 				if(!fileName.equals(lastFileName)){
 					lastFileName = fileName;
 					System.out.println();
@@ -315,7 +315,7 @@ public class ErrorMonitorMain implements NotificationListener {
 	}
 
 	public static void main(String[] args) throws Exception {
-		List<String> in = new ArrayList<String>(1);
+		List<String> in = new ArrayList<String>(5);
 		in.add("error");
 		in.add("ERROR");
 		in.add("fatal");
@@ -324,11 +324,15 @@ public class ErrorMonitorMain implements NotificationListener {
 		List<String> contentOut = new ArrayList<String>(1);
 		contentOut.add("| FYI |");
 		
+		List<String> fileIn = new ArrayList<String>(1);
+		fileIn.add("dp10_prod");
+		
 		List<String> out = new ArrayList<String>(1);
 		//out.add("sp4tsdiag");
 		
+		
 		ErrorMonitorConfigMXBean content = new ErrorMonitorConfig(in, contentOut, false);
-		ErrorMonitorConfigMXBean filename = new ErrorMonitorConfig(new ArrayList<String>(1), out, true);
+		ErrorMonitorConfigMXBean filename = new ErrorMonitorConfig(fileIn, out, false);
 		
 		ConnectConfigMXBean conConfig = new ConnectConfig();
 		conConfig.put(ConnectConfigEnum.SERVICEURL.toString(), "service:jmx:rmi:///jndi/rmi://d6t0009g.atlanta.hp.com:12099/filemonitor");

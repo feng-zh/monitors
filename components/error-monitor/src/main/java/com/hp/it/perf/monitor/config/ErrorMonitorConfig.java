@@ -52,6 +52,8 @@ public class ErrorMonitorConfig implements ErrorMonitorConfigMXBean {
 						break;
 					}
 				}
+			}else{
+				result = true;
 			}
 		}
 		
