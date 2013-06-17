@@ -29,6 +29,7 @@ import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 
 import com.hp.it.perf.monitor.config.ConfigEnum;
+import com.hp.it.perf.monitor.config.ConfigLoader;
 import com.hp.it.perf.monitor.config.ConnectConfig;
 import com.hp.it.perf.monitor.config.ConnectConfigEnum;
 import com.hp.it.perf.monitor.config.ConnectConfigMXBean;
@@ -315,28 +316,41 @@ public class ErrorMonitorMain implements NotificationListener {
 	}
 
 	public static void main(String[] args) throws Exception {
-		List<String> in = new ArrayList<String>(5);
-		in.add("error");
-		in.add("ERROR");
-		in.add("fatal");
-		in.add("FATAL");
+		String url = null, proFile = null;
 		
-		List<String> contentOut = new ArrayList<String>(1);
-		contentOut.add("| FYI |");
+		if(args != null && args.length > 1){
+			url = args[0];
+			proFile = args[1];
+		}else{
+			System.out.println("--------------------------------------------------------------");
+			System.out.println("-- Invalid input parameters ----------------------------------");
+			System.out.println("-- usage:                   ----------------------------------");
+			System.out.println("-- java ErrorMonitorMain JMXUrl propertyFileUrl    -----------");
+			System.out.println("--------------------------------------------------------------");
+			
+			System.exit(0);
+		}
 		
-		List<String> fileIn = new ArrayList<String>(1);
-		fileIn.add("dp10_prod");
+		ConfigLoader loader = new ConfigLoader(proFile);
 		
-		List<String> out = new ArrayList<String>(1);
+		List<String> in = loader.getProperties("CONTENT_INCLUDE");
+		
+		List<String> contentOut = loader.getProperties("CONTENT_EXCLUDE");
+		
+		List<String> fileIn = loader.getProperties("FILENAME_INCLUDE");
+		
+		List<String> out = loader.getProperties("FILENAME_EXCLUDE");
 		//out.add("sp4tsdiag");
-		
-		
+				
 		ErrorMonitorConfigMXBean content = new ErrorMonitorConfig(in, contentOut, false);
 		ErrorMonitorConfigMXBean filename = new ErrorMonitorConfig(fileIn, out, false);
 		
 		ConnectConfigMXBean conConfig = new ConnectConfig();
-		conConfig.put(ConnectConfigEnum.SERVICEURL.toString(), "service:jmx:rmi:///jndi/rmi://d6t0009g.atlanta.hp.com:12099/filemonitor");
-
+		if(url != null){
+			conConfig.put(ConnectConfigEnum.SERVICEURL.toString(), url);
+		}else{
+			conConfig.put(ConnectConfigEnum.SERVICEURL.toString(), "service:jmx:rmi:///jndi/rmi://d6t0009g.atlanta.hp.com:12099/filemonitor");
+		}
 		MBeanServer mbs = 
 	            ManagementFactory.getPlatformMBeanServer(); 
 	                 

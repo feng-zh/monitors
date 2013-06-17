@@ -55,13 +55,13 @@ public class ErrorMonitorConfig implements ErrorMonitorConfigMXBean {
 			}else{
 				result = true;
 			}
-		}
-		
-		if(result && excludes != null && !excludes.isEmpty()){
-			for(String out: excludes){
-				if(s.contains(out)){
-					result = false;
-					break;
+			
+			if(result && excludes != null && !excludes.isEmpty()){
+				for(String out: excludes){
+					if(s.contains(out)){
+						result = false;
+						break;
+					}
 				}
 			}
 		}
