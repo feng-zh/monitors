@@ -233,7 +233,10 @@ public class RandomAccessFileReader implements Closeable {
 				keepAliveQueue.add(timeoutReference);
 				log.trace("add file reader into keep alive queue: {}", file);
 			} else {
+				keepAliveQueue.remove(timeoutReference);
 				timeoutReference.ping();
+				keepAliveQueue.add(timeoutReference);
+				log.trace("ping file reader into keep alive queue: {}", file);
 			}
 		}
 	}
