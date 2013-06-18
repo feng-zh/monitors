@@ -36,6 +36,8 @@ public class RandomAccessFileReader implements Closeable {
 	private int idleTimeout = 0;
 
 	private boolean closed = true;
+	
+	private volatile boolean inReading = false;
 
 	private static DelayQueue<TimeoutReaderReference> keepAliveQueue = new DelayQueue<TimeoutReaderReference>();
 
@@ -212,6 +214,9 @@ public class RandomAccessFileReader implements Closeable {
 			// maybe just keep alive again
 			keepAliveQueue.add(timeoutReference);
 			log.trace("re-add file reader back to queue: {}", file);
+		} else if (inReading) {
+			// maybe in reading
+			log.trace("file reader is in reading: {}", file);
 		} else {
 			timeoutReference = null;
 			// start off-line
@@ -302,6 +307,7 @@ public class RandomAccessFileReader implements Closeable {
 		// check if new line in it
 		int checkOffset = lineBufOffset;
 		int newLineOffset;
+		RandomAccessFile lAccess = access;
 		while (true) {
 			newLineOffset = lineBuf.indexOf((byte) '\n', checkOffset);
 			if (newLineOffset < 0) {
@@ -309,7 +315,7 @@ public class RandomAccessFileReader implements Closeable {
 				checkOffset = lineBuf.length();
 				// check underline reader
 				int readLen;
-				if ((readLen = access.read(readBuf)) != -1) {
+				if ((readLen = lAccess.read(readBuf)) != -1) {
 					lineBuf.append(readBuf, 0, readLen);
 				} else {
 					// no data read till now
@@ -320,7 +326,7 @@ public class RandomAccessFileReader implements Closeable {
 			} else if (newLineOffset + 1 == lineBuf.length()) {
 				// buffer contains only one line, try load more
 				int readLen;
-				if ((readLen = access.read(readBuf)) != -1) {
+				if ((readLen = lAccess.read(readBuf)) != -1) {
 					lineBuf.append(readBuf, 0, readLen);
 				} else {
 					// no data read in underline reader
@@ -359,25 +365,30 @@ public class RandomAccessFileReader implements Closeable {
 			log.debug("try to reopen renamed file ({} -> {})", oldName, file);
 			close0(oldName);
 		}
-		if (access == null) {
-			// lazy open or was off-line
-			try {
-				open0();
-			} catch (FileNotFoundException e) {
-				// file renamed or deleted
-				log.info("file '{}' cannot open: {}", file, e.getMessage());
+		inReading = true;
+		try {
+			if (access == null) {
+				// lazy open or was off-line
+				try {
+					open0();
+				} catch (FileNotFoundException e) {
+					// file renamed or deleted
+					log.info("file '{}' cannot open: {}", file, e.getMessage());
+					return null;
+				}
+			}
+			byte[] line = readLine0();
+			log.trace("readline got {} bytes",
+					(line == null ? "0" : Integer.toString(line.length)));
+			if (line != null) {
+				loadedLineNumber++;
+				return line;
+			} else {
+				// no data loaded
 				return null;
 			}
-		}
-		byte[] line = readLine0();
-		log.trace("readline got {} bytes",
-				(line == null ? "0" : Integer.toString(line.length)));
-		if (line != null) {
-			loadedLineNumber++;
-			return line;
-		} else {
-			// no data loaded
-			return null;
+		} finally {
+			inReading = false;
 		}
 	}
 
