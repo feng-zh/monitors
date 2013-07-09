@@ -219,7 +219,7 @@ public class ErrorMonitorMain implements NotificationListener {
 		ContentProvider contentProvider = JMX.newMXBeanProxy(mbsc,
 				monitorObjName, ContentProvider.class, true);
 		// contentProvider.setCompressMode(true);
-		// contentProvider.setNotificationEnabled(true);
+		contentProvider.setNotificationEnabled(true);
 		((NotificationEmitter) contentProvider).addNotificationListener(this,
 				null, contentProvider);
 
@@ -364,7 +364,7 @@ public class ErrorMonitorMain implements NotificationListener {
 		
 		Map<String, ErrorMonitorConfigMXBean> configs = new HashMap<String, ErrorMonitorConfigMXBean>();
 		configs.put(ConfigEnum.CONTENTCONFIG.toString(), content);
-		configs.put(ConfigEnum.FILENAMECONFIG.toString(), content);
+		configs.put(ConfigEnum.FILENAMECONFIG.toString(), filename);
 		
 		String monitorConnection = conConfig.getConfigs().get(ConnectConfigEnum.SERVICEURL.toString());
 		
