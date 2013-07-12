@@ -7,4 +7,12 @@
     <relativePath>..</relativePath>
   </parent>
   <artifactId>hub-shared</artifactId>
+  <dependencies>
+  	<dependency>
+  		<groupId>javax.ws.rs</groupId>
+  		<artifactId>javax.ws.rs-api</artifactId>
+  		<version>2.0</version>
+  		<optional>true</optional>
+  	</dependency>
+  </dependencies>
 </project>

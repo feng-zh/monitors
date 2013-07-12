@@ -29,7 +29,7 @@ public class MonitorHubJmxClient implements MonitorHub {
 			ObjectName hubObjectName) {
 		this.mbeanServer = mbeanServer;
 		this.hubObjectName = hubObjectName;
-		this.mbean = JMX.newMBeanProxy(mbeanServer, hubObjectName,
+		this.mbean = JMX.newMXBeanProxy(mbeanServer, hubObjectName,
 				MonitorHubServiceMXBean.class, true);
 	}
 

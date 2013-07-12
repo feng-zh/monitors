@@ -12,10 +12,5 @@
   		<artifactId>hub-shared</artifactId>
   		<version>${project.version}</version>
   	</dependency>
-  	<dependency>
-  		<groupId>com.hp.it.perf.monitor.hub</groupId>
-  		<artifactId>hub-client</artifactId>
-  		<version>${project.version}</version>
-  	</dependency>
   </dependencies>
 </project>

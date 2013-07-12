@@ -13,7 +13,7 @@ import javax.management.ObjectName;
 import com.hp.it.perf.monitor.hub.MonitorEndpoint;
 import com.hp.it.perf.monitor.hub.MonitorHub;
 
-public class MonitorHubJmxServer extends NotificationBroadcasterSupport
+public class MonitorHubService extends NotificationBroadcasterSupport
 		implements MonitorHubServiceMXBean, MBeanRegistration {
 
 	private MonitorHub coreHub;
@@ -24,7 +24,7 @@ public class MonitorHubJmxServer extends NotificationBroadcasterSupport
 
 	private List<MonitorHubEndpointService> endpointsService = new ArrayList<MonitorHubEndpointService>();
 
-	public MonitorHubJmxServer(MonitorHub coreHub) {
+	public MonitorHubService(MonitorHub coreHub) {
 		this.coreHub = coreHub;
 	}
 
