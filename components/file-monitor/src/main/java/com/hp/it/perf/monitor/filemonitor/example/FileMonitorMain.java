@@ -38,7 +38,7 @@ public class FileMonitorMain {
 		@Override
 		public boolean accept(File pathname) {
 			if (excludingFilenameString != null
-					&& pathname.getName().matches(
+					&& pathname.getAbsolutePath().matches(
 							".+" + excludingFilenameString + ".*")) {
 				return false;
 			}
