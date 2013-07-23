@@ -32,5 +32,10 @@
   		<version>1.3</version>
   		<scope>test</scope>
   	</dependency>
+  	<dependency>
+  		<groupId>com.hp.it.perf.monitor.hub</groupId>
+  		<artifactId>hub-shared</artifactId>
+  		<version>0.0.1-SNAPSHOT</version>
+  	</dependency>
   </dependencies>
 </project>

@@ -11,6 +11,8 @@ import javax.management.NotificationFilter;
 import javax.management.NotificationListener;
 import javax.management.ObjectName;
 
+import com.hp.it.perf.monitor.hub.HubPublishOption;
+import com.hp.it.perf.monitor.hub.HubPublisher;
 import com.hp.it.perf.monitor.hub.HubSubscribeOption;
 import com.hp.it.perf.monitor.hub.HubSubscriber;
 import com.hp.it.perf.monitor.hub.MonitorEndpoint;
@@ -92,6 +94,18 @@ public class MonitorHubJmxClient implements MonitorHub {
 	public void unsubscribe(HubSubscriber subscriber) {
 		// TODO Auto-generated method stub
 
+	}
+
+	@Override
+	public String[] getDomains() {
+		return mbean.getDomains();
+	}
+
+	@Override
+	public HubPublisher createPublisher(MonitorEndpoint endpoint,
+			HubPublishOption option) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

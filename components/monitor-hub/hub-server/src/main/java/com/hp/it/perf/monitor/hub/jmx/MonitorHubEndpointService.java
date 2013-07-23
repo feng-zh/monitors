@@ -6,6 +6,7 @@ import javax.management.Notification;
 import javax.management.NotificationBroadcasterSupport;
 import javax.management.NotificationEmitter;
 
+import com.hp.it.perf.monitor.hub.GatewayPayload;
 import com.hp.it.perf.monitor.hub.HubEvent;
 import com.hp.it.perf.monitor.hub.HubSubscriber;
 import com.hp.it.perf.monitor.hub.MonitorEndpoint;
@@ -53,7 +54,27 @@ public class MonitorHubEndpointService extends NotificationBroadcasterSupport
 
 	}
 
+	public long getDataCount() {
+		return seq.get();
+	}
+
 	MonitorEndpoint getEndpoint() {
 		return endpoint;
+	}
+
+	@Override
+	public String getEndpointDomain() {
+		return endpoint.getDomain();
+	}
+
+	@Override
+	public String getEndpointName() {
+		return endpoint.getName();
+	}
+
+	@Override
+	public void publish(GatewayPayload... payloads) {
+		// TODO Auto-generated method stub
+		
 	}
 }

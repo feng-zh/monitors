@@ -4,6 +4,8 @@ import java.util.EventObject;
 
 public class MonitorEvent extends EventObject {
 
+	private static final long serialVersionUID = 5047487426870993334L;
+
 	private long time;
 
 	private Object content;

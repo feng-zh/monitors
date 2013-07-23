@@ -5,17 +5,30 @@
 		<groupId>com.hp.it.perf.monitor.hub</groupId>
 		<artifactId>monitor-hub</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
+		<relativePath>..</relativePath>
 	</parent>
-	<artifactId>hub-server</artifactId>
+	<artifactId>hub-web</artifactId>
+	<packaging>war</packaging>
 	<dependencies>
 		<dependency>
 			<groupId>com.hp.it.perf.monitor.hub</groupId>
-			<artifactId>hub-shared</artifactId>
+			<artifactId>hub-server</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>javax.ws.rs</groupId>
 			<artifactId>javax.ws.rs-api</artifactId>
+			<version>2.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.glassfish.jersey.containers</groupId>
+			<artifactId>jersey-container-servlet-core</artifactId>
+			<version>2.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.glassfish.jersey.media</groupId>
+			<artifactId>jersey-media-json-jackson</artifactId>
+			<version>2.0</version>
 		</dependency>
 	</dependencies>
 </project>
