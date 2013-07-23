@@ -10,9 +10,6 @@ public interface UniqueFileMXBean {
 	public List<FileContentInfo> getFileContentInfos(boolean realtime,
 			boolean actived) throws IOException;
 	
-	public List<FileContentInfo> getFileContentInfos(boolean realtime)
-			throws IOException;
-
 	public int getReadLineCount();
 
 	public long getReadByteCount();
