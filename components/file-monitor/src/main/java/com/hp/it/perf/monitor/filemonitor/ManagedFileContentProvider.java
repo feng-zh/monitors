@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -71,7 +72,7 @@ abstract class ManagedFileContentProvider extends
 	private boolean compressMode = true;
 
 	private LineRecordBuffer lineBuffer;
-	
+
 	private boolean notificationEnabled = false;
 
 	private static ScheduledExecutorService scheduler = Executors
@@ -140,9 +141,10 @@ abstract class ManagedFileContentProvider extends
 				if (lineBuffer == null) {
 					lineBuffer = new LineRecordBuffer(BUFFER_SIZE, BUFFER_TIME,
 							new LineRecordBuffer.BufferHandler() {
-	
+
 								@Override
-								public void handleBuffer(Queue<LineRecord> buffer) {
+								public void handleBuffer(
+										Queue<LineRecord> buffer) {
 									Notification notification = new Notification(
 											LINE_RECORD, this, seq
 													.incrementAndGet(), System
@@ -236,12 +238,26 @@ abstract class ManagedFileContentProvider extends
 				new DeflaterOutputStream(baOut), 512));
 		try {
 			out.writeInt(lines.size());
+			Map<Long, String[]> providers = new HashMap<Long, String[]>();
 			for (LineRecord line : lines) {
 				out.writeLong(line.getProviderId());
 				out.writeInt(line.getLineNum());
 				out.writeInt(line.getLine().length);
 				out.write(line.getLine());
+				if (!providers.containsKey(line.getProviderId())) {
+					providers.put(line.getProviderId(), line.getProvider());
+				}
 			}
+			out.writeInt(providers.size());
+			for (Entry<Long, String[]> entry : providers.entrySet()) {
+				out.writeLong(entry.getKey());
+				out.writeInt(entry.getValue().length);
+				for (String name : entry.getValue()) {
+					out.writeUTF(name);
+				}
+			}
+			// end sign
+			out.writeInt(-1);
 			out.close();
 		} catch (IOException e) {
 			throw new IllegalStateException(e);
@@ -266,6 +282,23 @@ abstract class ManagedFileContentProvider extends
 				line.setLine(lineBytes);
 				lines.add(line);
 			}
+			int pSize = input.readInt();
+			Map<Long, String[]> providerList = new HashMap<Long, String[]>(
+					pSize);
+			for (int i = 0; i < pSize; i++) {
+				long providerId = input.readLong();
+				int providerSize = input.readInt();
+				String[] provider = new String[providerSize];
+				for (int j = 0; j < providerSize; j++) {
+					provider[j] = input.readUTF();
+				}
+				providerList.put(providerId, provider);
+			}
+			for (LineRecord line : lines) {
+				line.setProvider(providerList.get(line.getProviderId()));
+			}
+			// read end sign
+			input.readInt();
 			input.close();
 			return lines;
 		} catch (IOException e) {
@@ -404,5 +437,5 @@ abstract class ManagedFileContentProvider extends
 	public void setNotificationEnabled(boolean notificationEnabled) {
 		this.notificationEnabled = notificationEnabled;
 	}
-	
+
 }

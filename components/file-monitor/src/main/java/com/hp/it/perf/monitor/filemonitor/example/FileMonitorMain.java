@@ -107,7 +107,7 @@ public class FileMonitorMain {
 			String lastFileName = null;
 			int lastLineNo = 0;
 			while ((line = suite.readLine()) != null) {
-				String fileName = getFileName(line.getProviderId(), suite);
+				String fileName = getFileName(line);
 				if (!fileName.equals(lastFileName)) {
 					if (lastFileName != null) {
 						// end last file
@@ -120,7 +120,7 @@ public class FileMonitorMain {
 			}
 		} else {
 			while ((line = suite.readLine()) != null) {
-				System.out.print(getFileName(line.getProviderId(), suite) + ":"
+				System.out.print(getFileName(line) + ":"
 						+ new String(line.getLine(), "UTF-8"));
 			}
 		}
@@ -153,8 +153,13 @@ public class FileMonitorMain {
 		}
 	}
 
-	private static String getFileName(long providerId, FileContentProvider suite)
-			throws IOException {
+	private static String getFileName(LineRecord line) {
+		return line.getProvider()[0];
+	}
+
+	@Deprecated
+	private static String getFileName0(long providerId,
+			FileContentProvider suite) throws IOException {
 		FileContentInfo info = infos.get(providerId);
 		if (info == null) {
 			refreshFiles(suite);

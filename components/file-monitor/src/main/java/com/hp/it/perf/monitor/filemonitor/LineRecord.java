@@ -11,6 +11,8 @@ public class LineRecord implements Serializable {
 	private int lineNum;
 
 	private long providerId;
+	
+	private String[] provider;
 
 	public byte[] getLine() {
 		return line;
@@ -36,4 +38,12 @@ public class LineRecord implements Serializable {
 		this.providerId = providerId;
 	}
 
+	public String[] getProvider() {
+		return provider;
+	}
+
+	public void setProvider(String[] provider) {
+		this.provider = provider;
+	}
+	
 }

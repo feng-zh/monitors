@@ -204,6 +204,8 @@ public class UniqueFile extends ManagedFileContentProvider implements
 		record.setLineNum(lineNumber);
 		record.setLine(line);
 		record.setProviderId(providerId);
+		record.setProvider(new String[] {currentFile == null ? null : currentFile
+				.getPath(), originalRealPath});
 		return record;
 	}
 
