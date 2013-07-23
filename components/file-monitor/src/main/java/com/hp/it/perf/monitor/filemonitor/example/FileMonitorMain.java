@@ -31,11 +31,17 @@ import com.hp.it.perf.monitor.filemonitor.UniqueFile;
 import com.hp.it.perf.monitor.filemonitor.nio.MultiMonitorService;
 
 public class FileMonitorMain {
+	
+	private static String excludingFilenameString = System.getProperty("excludingFilenameString");
 
 	private static FileFilter textFilter = new FileFilter() {
-
 		@Override
 		public boolean accept(File pathname) {
+			if (excludingFilenameString != null
+					&& pathname.getName().matches(
+							".+" + excludingFilenameString + ".*")) {
+				return false;
+			}
 			if (pathname.getName().matches(".+\\.log.*")) {
 				return true;
 			}
