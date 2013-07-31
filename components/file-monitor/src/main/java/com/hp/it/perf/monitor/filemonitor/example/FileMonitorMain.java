@@ -154,7 +154,11 @@ public class FileMonitorMain {
 	}
 
 	private static String getFileName(LineRecord line) {
-		return line.getProvider()[0];
+		String fileName = line.getProvider()[0];
+		if (fileName == null) {
+			fileName = "[UNKOWN FILE]";
+		}
+		return fileName;
 	}
 
 	@Deprecated
