@@ -64,5 +64,6 @@
 	<modules>
 		<module>file-monitor</module>
 		<module>file-binary-search</module>
+		<module>file-monitor2</module>
 	</modules>
 </project>
