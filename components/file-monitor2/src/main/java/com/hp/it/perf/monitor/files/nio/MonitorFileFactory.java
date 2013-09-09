@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.FileStore;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -17,7 +18,16 @@ import com.hp.it.perf.monitor.files.FileStatistics;
 
 public class MonitorFileFactory implements FileInstanceFactory {
 
-	private MultiMonitorFileService multiMonitorService = new MultiMonitorFileService();
+	private MultiMonitorFileService multiMonitorService = new MultiMonitorFileService() {
+		@Override
+		protected boolean isFuseType(FileStore store) {
+			if (forcePollMode) {
+				return true;
+			} else {
+				return super.isFuseType(store);
+			}
+		}
+	};
 
 	// initial as default strategy
 	private FileClusterStrategy strategy = new FileClusterStrategy() {
@@ -31,6 +41,8 @@ public class MonitorFileFactory implements FileInstanceFactory {
 	private Map<Path, MonitorFileFolder> folders = new ConcurrentHashMap<Path, MonitorFileFolder>();
 
 	private DefaultFileStatistics statistics = new DefaultFileStatistics();
+
+	private boolean forcePollMode;
 
 	@Override
 	public FileInstance getFileInstance(String path) throws IOException,
@@ -84,6 +96,10 @@ public class MonitorFileFactory implements FileInstanceFactory {
 	@Override
 	public FileStatistics getStatistics() {
 		return statistics;
+	}
+
+	public void setForcePollMode(boolean forcePollMode) {
+		this.forcePollMode = forcePollMode;
 	}
 
 }

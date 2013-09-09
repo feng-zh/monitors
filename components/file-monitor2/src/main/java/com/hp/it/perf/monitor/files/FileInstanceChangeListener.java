@@ -2,12 +2,30 @@ package com.hp.it.perf.monitor.files;
 
 public interface FileInstanceChangeListener {
 
-	public void onFileInstanceCreated(FileInstance instance);
+	public class FileChangeOption {
+		private final FileInstance renameFile;
 
-	public void onFileInstanceDeleted(FileInstance instance);
+		public FileChangeOption(FileInstance renameFile) {
+			this.renameFile = renameFile;
+		}
 
-	public void onFileInstanceRenamed(FileInstance oldInstance, FileInstance newInstance);
+		public FileChangeOption() {
+			this.renameFile = null;
+		}
 
-	public void onFileInstancePackaged(FileInstance oldInstance, FileInstance newInstance);
+		public boolean isRenameOption() {
+			return this.renameFile != null;
+		}
+
+		public FileInstance getRenameFile() {
+			return this.renameFile;
+		}
+	}
+
+	public void onFileInstanceCreated(FileInstance instance,
+			FileChangeOption changeOption);
+
+	public void onFileInstanceDeleted(FileInstance instance,
+			FileChangeOption changeOption);
 
 }

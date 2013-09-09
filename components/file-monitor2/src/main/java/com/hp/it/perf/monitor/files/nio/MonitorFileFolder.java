@@ -13,7 +13,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hp.it.perf.monitor.files.CompositeContentLineStream;
+import com.hp.it.perf.monitor.files.CompositeInstanceContentLineStream;
 import com.hp.it.perf.monitor.files.ContentLineStream;
 import com.hp.it.perf.monitor.files.ContentLineStreamProvider;
 import com.hp.it.perf.monitor.files.ContentLineStreamProviderDelegator;
@@ -24,6 +24,7 @@ import com.hp.it.perf.monitor.files.FileContentChangedListener;
 import com.hp.it.perf.monitor.files.FileInstance;
 import com.hp.it.perf.monitor.files.FileInstanceChangeAwareProxy;
 import com.hp.it.perf.monitor.files.FileInstanceChangeListener;
+import com.hp.it.perf.monitor.files.FileInstanceChangeListener.FileChangeOption;
 import com.hp.it.perf.monitor.files.FileOpenOption;
 import com.hp.it.perf.monitor.files.FileSet;
 
@@ -79,7 +80,7 @@ class MonitorFileFolder implements FileSet, ContentLineStreamProvider,
 		this.folderWatchEntry = this.monitorService.registerWatch(this);
 	}
 
-	private MonitorFileInstance makeFileInstance(File file) {
+	MonitorFileInstance makeFileInstance(File file) {
 		String clusterName;
 		try {
 			clusterName = clusterNameStrategy.getClusterName(file.getName(),
@@ -125,7 +126,7 @@ class MonitorFileFolder implements FileSet, ContentLineStreamProvider,
 
 	@Override
 	public ContentLineStream open(FileOpenOption option) throws IOException {
-		final CompositeContentLineStream contentStream = new CompositeContentLineStream(
+		final CompositeInstanceContentLineStream contentStream = new CompositeInstanceContentLineStream(
 				"folder " + folder, option, this) {
 
 			@Override
@@ -152,31 +153,15 @@ class MonitorFileFolder implements FileSet, ContentLineStreamProvider,
 		listenerList.remove(listener);
 	}
 
-	void onFileInstanceCreated(FileInstance instance) {
+	void onFileInstanceCreated(FileInstance instance, FileChangeOption option) {
 		addInstance(instance);
-		proxy.onFileInstanceCreated(instance);
+		proxy.onFileInstanceCreated(instance, option);
 	}
 
-	void onFileInstanceDeleted(FileInstance instance) {
+	void onFileInstanceDeleted(FileInstance instance, FileChangeOption option) {
 		List<FileInstanceChangeListener> removingListeners = preRemoveInstance(instance);
-		proxy.onFileInstanceDeleted(instance);
+		proxy.onFileInstanceDeleted(instance, option);
 		postRemoveInstance(instance, removingListeners);
-	}
-
-	void onFileInstanceRenamed(FileInstance oldInstance,
-			FileInstance newInstance) {
-		List<FileInstanceChangeListener> removingListeners = preRemoveInstance(oldInstance);
-		addInstance(newInstance);
-		proxy.onFileInstanceRenamed(oldInstance, newInstance);
-		postRemoveInstance(oldInstance, removingListeners);
-	}
-
-	void onFileInstancePackaged(FileInstance oldInstance,
-			FileInstance newInstance) {
-		List<FileInstanceChangeListener> removingListeners = preRemoveInstance(oldInstance);
-		addInstance(newInstance);
-		proxy.onFileInstancePackaged(oldInstance, newInstance);
-		postRemoveInstance(oldInstance, removingListeners);
 	}
 
 	protected List<FileInstanceChangeListener> preRemoveInstance(

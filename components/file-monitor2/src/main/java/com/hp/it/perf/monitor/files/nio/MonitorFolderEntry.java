@@ -3,10 +3,8 @@ package com.hp.it.perf.monitor.files.nio;
 import java.nio.file.Path;
 import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
-import java.util.ArrayList;
-import java.util.BitSet;
+import java.nio.file.WatchEvent.Kind;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -14,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hp.it.perf.monitor.files.FileInstance;
+import com.hp.it.perf.monitor.files.FileInstanceChangeListener.FileChangeOption;
 import com.hp.it.perf.monitor.files.nio.FileKeyDetector.WatchEventKeys;
 
 class MonitorFolderEntry {
@@ -24,8 +23,6 @@ class MonitorFolderEntry {
 	private MonitorFileFolder folder;
 
 	private FileKeyDetector fileKeyDetector;
-
-	private Map<FileKey, FileKey> fileKeyHistory = new HashMap<FileKey, FileKey>();
 
 	private Map<FileKey, FileInstance> keyMapping = new HashMap<FileKey, FileInstance>();
 
@@ -86,111 +83,98 @@ class MonitorFolderEntry {
 		// filter events
 		List<WatchEventKeys> newEvents = fileKeyDetector
 				.detectWatchEvents(events);
-		Map<FileInstance, BitSet> eventList = new LinkedHashMap<FileInstance, BitSet>();
-		Map<FileKey, FileKey> updatedHistory = new HashMap<FileKey, FileKey>();
+		Map<Path, WatchEventKeys> pendingRenameFromEvents = new HashMap<Path, FileKeyDetector.WatchEventKeys>();
+		Map<Path, WatchEventKeys> pendingRenameToEvents = new HashMap<Path, FileKeyDetector.WatchEventKeys>();
 		for (int i = 0, n = newEvents.size(); i < n; i++) {
 			WatchEventKeys e = newEvents.get(i);
-			FileKey eventFileKey = fileKeyHistory.remove(e.previousFileKey);
-			if (e.previousFileKey == null) {
-				eventFileKey = e.currentFileKey;
-			}
-			if (eventFileKey == null) {
-				eventFileKey = e.previousFileKey;
-			}
-			if (eventFileKey != null && e.currentFileKey != null) {
-				updatedHistory.put(e.currentFileKey, eventFileKey);
-			}
-			log.trace("NEW Event - {}:{}({}) [{} -> {}]", new Object[] {
-					e.event.kind(), e.event.context(), eventFileKey,
-					e.previousFileKey, e.currentFileKey });
-			// set back for later processing
-			e.currentFileKey = eventFileKey;
-			if (eventFileKey != null) {
-				FileInstance fileInstance = keyMapping.get(eventFileKey);
-				if (fileInstance == null) {
-					// new file key in mapping
-					fileInstance = folder
-							.getOrCreateFileInstance(((Path) e.event.context())
-									.toFile());
-					log.trace("add new file instance key mapping: {} -> {}",
-							eventFileKey, fileInstance);
-					keyMapping.put(eventFileKey, fileInstance);
+			log.trace("NEW Event - {}({})[({}){} -> ({}){}]", new Object[] {
+					e.event.kind(), e.event.context(), e.previousPath,
+					e.previousFileKey, e.currentPath, e.currentFileKey });
+			FileInstance oldFileInstance = keyMapping.get(e.previousFileKey);
+			FileInstance newFileInstance = keyMapping.get(e.currentFileKey);
+			Kind<?> kind = e.event.kind();
+			if (kind == StandardWatchEventKinds.ENTRY_MODIFY) {
+				// modify
+				e.currentInstance = newFileInstance;
+			} else if (kind == StandardWatchEventKinds.ENTRY_DELETE
+					|| kind == ENTRY_RENAME_FROM) {
+				// delete or rename from
+				keyMapping.remove(e.previousFileKey);
+				e.previousInstance = oldFileInstance;
+				if (kind == ENTRY_RENAME_FROM) {
+					pendingRenameFromEvents.put(e.currentPath, e);
+				}
+			} else if (kind == StandardWatchEventKinds.ENTRY_CREATE
+					|| kind == ENTRY_RENAME_TO) {
+				// create or rename to
+				e.currentInstance = folder.makeFileInstance(e.currentPath
+						.toFile());
+				keyMapping.put(e.currentFileKey, e.currentInstance);
+				if (kind == ENTRY_RENAME_TO) {
+					pendingRenameToEvents.put(e.previousPath, e);
 				} else {
-					if (e.event.kind() == StandardWatchEventKinds.ENTRY_MODIFY) {
-						// no-op;
-					} else if (e.event.kind() == StandardWatchEventKinds.ENTRY_DELETE) {
-						keyMapping.remove(eventFileKey);
-						log.trace(
-								"remove deleted file instance key mapping: {} -> {}",
-								eventFileKey, fileInstance);
-					} else if (e.event.kind() == ENTRY_RENAME_FROM) {
-						keyMapping.remove(eventFileKey);
-						log.trace(
-								"remove renamed from file instance key mapping: {} -> {}",
-								eventFileKey, fileInstance);
-					}
-				}
-				BitSet bitSet = eventList.get(fileInstance);
-				if (bitSet == null) {
-					bitSet = new BitSet(n);
-					eventList.put(fileInstance, bitSet);
-				}
-				bitSet.set(i);
-			}
-		}
-		fileKeyHistory.putAll(updatedHistory);
-		// processing events to downstream
-		for (Map.Entry<FileInstance, BitSet> entry : eventList.entrySet()) {
-			FileInstance fileInstance = entry.getKey();
-			BitSet bitset = entry.getValue();
-			// TODO removed in progress
-			List<WatchEventKeys> monitorEvents = new ArrayList<WatchEventKeys>(
-					bitset.cardinality());
-			for (int i = bitset.nextSetBit(0); i >= 0; i = bitset
-					.nextSetBit(i + 1)) {
-				WatchEventKeys eventKeys = newEvents.get(i);
-				WatchEvent<?> event = eventKeys.event;
-				// prepare file key
-				if (event != null) {
-					log.trace("{} on '{}' {} ({})", new Object[] {
-							event.kind(), event.context(),
-							event == null ? "not match" : "*match*",
-							fileInstance.getName() });
-					monitorEvents.add(eventKeys);
+					// set read offset in start
+					MonitorFileStream.saveReadOffset(e.currentInstance, 0L);
 				}
 			}
-			processEvent(fileInstance, monitorEvents);
 		}
-	}
-
-	private void processEvent(FileInstance instance,
-			List<WatchEventKeys> monitorEvents) {
-		// TODO rename or delete to update keyMapping
-		for (WatchEventKeys eventKey : monitorEvents) {
-			WatchEvent<?> event = eventKey.event;
-			if (event.kind() == StandardWatchEventKinds.ENTRY_MODIFY) {
-				log.trace("dispatch file {} content change event", instance);
-				folder.onContentChanged(instance);
-			} else if (event.kind() == StandardWatchEventKinds.ENTRY_CREATE) {
-				log.trace("dispatch file {} created event", instance);
-				folder.onFileInstanceCreated(instance);
-			} else if (event.kind() == StandardWatchEventKinds.ENTRY_DELETE) {
-				log.trace("dispatch file {} deleted event", instance);
-				folder.onFileInstanceDeleted(instance);
-			} else if (event.kind() == ENTRY_RENAME_TO) {
-				FileInstance newInstance = folder
-						.getOrCreateFileInstance(eventKey.currentFileKey
-								.getPath().toFile());
-				log.trace("dispatch file {} rename to {} event", instance,
-						newInstance);
-				folder.onFileInstanceRenamed(instance, newInstance);
-			} else if (event.kind() == ENTRY_RENAME_FROM) {
-				// TODO
-				log.trace("not dispatch file {} rename to {} event", instance,
-						eventKey.currentFileKey.getPath());
+		for (int i = 0, n = newEvents.size(); i < n; i++) {
+			WatchEventKeys e = newEvents.get(i);
+			Kind<?> kind = e.event.kind();
+			if (kind == ENTRY_RENAME_FROM) {
+				pendingRenameToEvents.get(e.previousPath).previousInstance = e.previousInstance;
+			} else if (kind == ENTRY_RENAME_TO) {
+				pendingRenameFromEvents.get(e.currentPath).currentInstance = e.currentInstance;
+			}
+		}
+		for (int i = 0, n = newEvents.size(); i < n; i++) {
+			WatchEventKeys e = newEvents.get(i);
+			FileInstance oldFileInstance = e.previousInstance;
+			FileInstance newFileInstance = e.currentInstance;
+			log.trace(
+					"Process {}({}) Event - [({}){} -> ({}){}] => [{} -> {}]",
+					new Object[] { e.event.kind(), e.event.context(),
+							e.previousPath, e.previousFileKey, e.currentPath,
+							e.currentFileKey, oldFileInstance, newFileInstance });
+			if (e.event.kind() == StandardWatchEventKinds.ENTRY_MODIFY) {
+				// no-op;
+				log.trace("dispatch file {} content change event",
+						newFileInstance);
+				folder.onContentChanged(newFileInstance);
 			} else {
-				// TODO
-				throw new IllegalStateException(event.toString());
+				boolean renamed = false;
+				if (e.event.kind() == StandardWatchEventKinds.ENTRY_DELETE
+						|| (renamed = (e.event.kind() == ENTRY_RENAME_FROM))) {
+					// remove or rename from
+					log.trace("remove {} file instance key mapping: {} -> {}",
+							renamed ? "renamed" : "deleted", e.previousFileKey,
+							oldFileInstance);
+					if (renamed) {
+						log.trace("dispatch rename file {} event (from {})",
+								newFileInstance, oldFileInstance);
+					} else {
+						log.trace("dispatch delete file {} event",
+								oldFileInstance);
+					}
+					folder.onFileInstanceDeleted(oldFileInstance,
+							renamed ? new FileChangeOption(newFileInstance)
+									: new FileChangeOption());
+				} else if (e.event.kind() == StandardWatchEventKinds.ENTRY_CREATE
+						|| (renamed = (e.event.kind() == ENTRY_RENAME_TO))) {
+					log.trace("add {} file instance key mapping: {} -> {}",
+							renamed ? "renaming" : "creating",
+							e.currentFileKey, newFileInstance);
+					if (renamed) {
+						log.trace("dispatch rename file {} event (from {})",
+								newFileInstance, oldFileInstance);
+					} else {
+						log.trace("dispatch create file {} event",
+								newFileInstance);
+					}
+					folder.onFileInstanceCreated(newFileInstance,
+							renamed ? new FileChangeOption(oldFileInstance)
+									: new FileChangeOption());
+				}
 			}
 		}
 	}

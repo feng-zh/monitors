@@ -115,7 +115,7 @@ class PathKeyResolver {
 					BasicFileAttributes.class);
 			Object nativeKey = attr.fileKey();
 			return new FileKey(nativeKey == null ? path.toRealPath().toString()
-					: nativeKey, path);
+					: nativeKey);
 		} catch (IOException ignored) {
 			return null;
 		}
@@ -168,7 +168,7 @@ class PathKeyResolver {
 				} catch (IOException ignored) {
 					continue;
 				}
-				FileKey newFileKey = new FileKey(nativeKey, path);
+				FileKey newFileKey = new FileKey(nativeKey);
 				updatePathKey(path, newFileKey);
 				if (isSameKey(newFileKey, fileKey)) {
 					return path;

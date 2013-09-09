@@ -60,7 +60,8 @@ class NativeFileKeyDetector implements FileKeyDetector {
 			if (!(event.context() instanceof Path)) {
 				continue;
 			}
-			Path eventPath = watchPath.resolve((Path) event.context());
+			Path contextPath = (Path) event.context();
+			Path eventPath = watchPath.resolve(contextPath);
 			Kind<?> eventKind = event.kind();
 			FileKey historyKey = historyPathKeyResolver.resolveCachedPathKey(
 					eventPath, 0);
@@ -72,21 +73,24 @@ class NativeFileKeyDetector implements FileKeyDetector {
 				if (pathNotExist
 						&& historyPathKeyResolver.resolveCachedPath(historyKey,
 								0) == null) {
-					// not exist presently, keep this delete event
+					// not exist presently, keep this DELETE event
 					processedEvents.add(new WatchEventKeys(event, historyKey,
-							null));
+							eventPath, null, null));
 				} else {
 					// check if history key exists (in case native part event)
-					if (currentPathKeyResolver.resolvePathByKey(historyKey,
-							version) != null) {
+					Path currentPath = currentPathKeyResolver.resolvePathByKey(
+							historyKey, version);
+					if (currentPath != null) {
 						// exist
 						processedEvents.add(new WatchEventKeys(
 								new DelegateWatchEvent(
 										MonitorFolderEntry.ENTRY_RENAME_FROM,
-										event), historyKey, historyKey));
+										event), historyKey, eventPath,
+								historyKey, currentPath));
 					} else {
+						// not exist, keep DELETE event
 						processedEvents.add(new WatchEventKeys(event,
-								historyKey, historyKey));
+								historyKey, eventPath, historyKey, null));
 					}
 				}
 			} else if (eventKind == StandardWatchEventKinds.ENTRY_MODIFY) {
@@ -94,61 +98,74 @@ class NativeFileKeyDetector implements FileKeyDetector {
 				if (pathNotExist) {
 					// native mode, keep it
 					processedEvents.add(new WatchEventKeys(event, historyKey,
-							null));
+							eventPath, null, eventPath));
 				} else if (historyKey != null && historyKey.equals(currentKey)) {
 					// real modify, keep it
 					processedEvents.add(new WatchEventKeys(event, historyKey,
-							currentKey));
+							eventPath, currentKey, eventPath));
 				} else {
-					if (currentPathKeyResolver.resolvePathByKey(historyKey,
-							version) != null) {
+					Path currentPath;
+					if ((currentPath = currentPathKeyResolver.resolvePathByKey(
+							historyKey, version)) != null) {
 						// exist
 						// this was renamed to other,
 						processedEvents.add(new WatchEventKeys(
 								new DelegateWatchEvent(
 										MonitorFolderEntry.ENTRY_RENAME_FROM,
-										event), historyKey, historyKey));
+										event), historyKey, eventPath,
+								historyKey, currentPath));
 					} else {
 						// not exist
 						processedEvents.add(new WatchEventKeys(
 								new DelegateWatchEvent(
 										StandardWatchEventKinds.ENTRY_DELETE,
-										event), historyKey, null));
+										event), historyKey, eventPath, null,
+								null));
 					}
-					if (historyPathKeyResolver.resolveCachedPath(currentKey, 0) != null) {
+					Path cachedPath;
+					if ((cachedPath = historyPathKeyResolver.resolveCachedPath(
+							currentKey, 0)) != null) {
 						// and some renamed to this
 						processedEvents.add(new WatchEventKeys(
 								new DelegateWatchEvent(
 										MonitorFolderEntry.ENTRY_RENAME_TO,
-										event), currentKey, currentKey));
+										event), currentKey, cachedPath,
+								currentKey, eventPath));
 					} else {
 						processedEvents.add(new WatchEventKeys(
 								new DelegateWatchEvent(
 										StandardWatchEventKinds.ENTRY_CREATE,
-										event), null, currentKey));
+										event), null, null, currentKey,
+								eventPath));
 					}
 				}
 			} else if (eventKind == StandardWatchEventKinds.ENTRY_CREATE) {
+				Path cachedPath;
 				// check if file still exist
 				if (pathNotExist) {
 					// native mode, keep it
-					processedEvents.add(new WatchEventKeys(event, null,
-							currentKey));
-				} else if (historyPathKeyResolver.resolveCachedPath(currentKey,
-						0) != null) {
+					processedEvents.add(new WatchEventKeys(event, null, null,
+							currentKey, eventPath));
+				} else if ((cachedPath = historyPathKeyResolver
+						.resolveCachedPath(currentKey, 0)) != null) {
 					// previous exists
 					processedEvents.add(new WatchEventKeys(
 							new DelegateWatchEvent(
 									MonitorFolderEntry.ENTRY_RENAME_TO, event),
-							currentKey, currentKey));
+							currentKey, cachedPath, currentKey, eventPath));
 				} else {
 					// new created
-					processedEvents.add(new WatchEventKeys(event, null,
-							currentKey));
+					processedEvents.add(new WatchEventKeys(event, null, null,
+							currentKey, eventPath));
 				}
 			}
 		}
 		currentPathKeyResolver.updateVersion();
+		postProcess(processedEvents);
+		return processedEvents;
+	}
+
+	static void postProcess(List<WatchEventKeys> processedEvents) {
 		Collections.sort(processedEvents, new Comparator<WatchEventKeys>() {
 
 			@Override
@@ -175,6 +192,5 @@ class NativeFileKeyDetector implements FileKeyDetector {
 				}
 			}
 		});
-		return processedEvents;
 	}
 }

@@ -93,57 +93,31 @@ public class FileInstanceChangeAwareProxy implements FileInstanceChangeAware,
 		return list;
 	}
 
-	public void onFileInstanceCreated(FileInstance instance) {
+	public void onFileInstanceCreated(FileInstance instance,
+			FileChangeOption changeOption) {
 		if (isFiltered(instance)) {
 			return;
 		}
 		for (FileInstanceChangeListener li : listOfSingleListener(instance,
 				false)) {
-			li.onFileInstanceCreated(instance);
+			li.onFileInstanceCreated(instance, changeOption);
 		}
 		for (FileInstanceChangeListener li : listenerList) {
-			li.onFileInstanceCreated(instance);
+			li.onFileInstanceCreated(instance, changeOption);
 		}
 	}
 
-	public void onFileInstanceDeleted(FileInstance instance) {
+	public void onFileInstanceDeleted(FileInstance instance,
+			FileChangeOption changeOption) {
 		if (isFiltered(instance)) {
 			return;
 		}
 		for (FileInstanceChangeListener li : listOfSingleListener(instance,
 				false)) {
-			li.onFileInstanceDeleted(instance);
+			li.onFileInstanceDeleted(instance, changeOption);
 		}
 		for (FileInstanceChangeListener li : listenerList) {
-			li.onFileInstanceDeleted(instance);
-		}
-	}
-
-	public void onFileInstanceRenamed(FileInstance oldInstance,
-			FileInstance newInstance) {
-		if (isFiltered(oldInstance)) {
-			return;
-		}
-		for (FileInstanceChangeListener li : listOfSingleListener(oldInstance,
-				false)) {
-			li.onFileInstanceRenamed(oldInstance, newInstance);
-		}
-		for (FileInstanceChangeListener li : listenerList) {
-			li.onFileInstanceRenamed(oldInstance, newInstance);
-		}
-	}
-
-	public void onFileInstancePackaged(FileInstance oldInstance,
-			FileInstance newInstance) {
-		if (isFiltered(oldInstance)) {
-			return;
-		}
-		for (FileInstanceChangeListener li : listOfSingleListener(oldInstance,
-				false)) {
-			li.onFileInstancePackaged(oldInstance, newInstance);
-		}
-		for (FileInstanceChangeListener li : listenerList) {
-			li.onFileInstancePackaged(oldInstance, newInstance);
+			li.onFileInstanceDeleted(instance, changeOption);
 		}
 	}
 

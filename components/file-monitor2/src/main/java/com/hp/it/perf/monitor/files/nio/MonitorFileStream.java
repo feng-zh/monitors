@@ -161,6 +161,7 @@ class MonitorFileStream implements ContentLineStream,
 
 	private byte[] readLine() throws IOException {
 		if (stopRead) {
+			log.trace("no data for stop reading file {}", fileInstance);
 			return null;
 		} else {
 			log.trace("fetch one line from file {}", fileInstance);
@@ -212,39 +213,23 @@ class MonitorFileStream implements ContentLineStream,
 	}
 
 	@Override
-	public void onFileInstanceCreated(FileInstance instance) {
+	public void onFileInstanceCreated(FileInstance instance,
+			FileChangeOption option) {
 		// no-op;
 	}
 
 	@Override
-	public void onFileInstanceDeleted(FileInstance instance) {
-		if (!stopRead) {
-			stopRead = true;
-			log.debug("stop read on file {}", fileInstance);
-			// force end of file
-			closeMonitor();
+	public void onFileInstanceDeleted(FileInstance instance,
+			FileChangeOption option) {
+		if (option.isRenameOption()) {
+			// record previous offset
+			saveReadOffset(option.getRenameFile(), reader.position());
 		}
-	}
-
-	@Override
-	public void onFileInstanceRenamed(FileInstance instance,
-			FileInstance newInstance) {
-		// record previous offset
-		saveReadOffset(newInstance, reader.position());
 		if (!stopRead) {
 			stopRead = true;
-			// force end of file
-			closeMonitor();
-		}
-	}
-
-	@Override
-	public void onFileInstancePackaged(FileInstance instance,
-			FileInstance newInstance) {
-		// record previous offset
-		saveReadOffset(newInstance, reader.position());
-		if (!stopRead) {
-			stopRead = true;
+			log.debug("stop read on {} file {}",
+					option.isRenameOption() ? "rename" : "deleted",
+					fileInstance);
 			// force end of file
 			closeMonitor();
 		}

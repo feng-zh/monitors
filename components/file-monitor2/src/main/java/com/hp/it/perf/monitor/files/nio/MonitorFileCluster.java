@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import com.hp.it.perf.monitor.files.CompositeContentLineStream;
+import com.hp.it.perf.monitor.files.CompositeInstanceContentLineStream;
 import com.hp.it.perf.monitor.files.ContentLineStream;
 import com.hp.it.perf.monitor.files.ContentLineStreamProvider;
 import com.hp.it.perf.monitor.files.FileCluster;
@@ -61,7 +61,7 @@ class MonitorFileCluster implements FileCluster, ContentLineStreamProvider,
 
 	@Override
 	public ContentLineStream open(FileOpenOption option) throws IOException {
-		final CompositeContentLineStream contentStream = new CompositeContentLineStream(
+		final CompositeInstanceContentLineStream contentStream = new CompositeInstanceContentLineStream(
 				"cluster " + name + "@" + folder.getFolder(), option, folder) {
 
 			@Override
@@ -90,37 +90,26 @@ class MonitorFileCluster implements FileCluster, ContentLineStreamProvider,
 	}
 
 	@Override
-	public void onFileInstanceCreated(FileInstance instance) {
+	public void onFileInstanceCreated(FileInstance instance,
+			FileChangeOption changeOption) {
+		FileInstance checkInstance = instance;
+		if (changeOption.isRenameOption()) {
+			// old file instance
+			checkInstance = changeOption.getRenameFile();
+		}
+		if (!isInclude(checkInstance)) {
+			return;
+		}
+		proxy.onFileInstanceCreated(instance, changeOption);
+	}
+
+	@Override
+	public void onFileInstanceDeleted(FileInstance instance,
+			FileChangeOption changeOption) {
 		if (!isInclude(instance)) {
 			return;
 		}
-		proxy.onFileInstanceCreated(instance);
-	}
-
-	@Override
-	public void onFileInstanceDeleted(FileInstance instance) {
-		if (!isInclude(instance)) {
-			return;
-		}
-		proxy.onFileInstanceDeleted(instance);
-	}
-
-	@Override
-	public void onFileInstanceRenamed(FileInstance oldInstance,
-			FileInstance newInstance) {
-		if (!isInclude(oldInstance)) {
-			return;
-		}
-		proxy.onFileInstanceRenamed(oldInstance, newInstance);
-	}
-
-	@Override
-	public void onFileInstancePackaged(FileInstance oldInstance,
-			FileInstance newInstance) {
-		if (!isInclude(oldInstance)) {
-			return;
-		}
-		proxy.onFileInstancePackaged(oldInstance, newInstance);
+		proxy.onFileInstanceDeleted(instance, changeOption);
 	}
 
 }

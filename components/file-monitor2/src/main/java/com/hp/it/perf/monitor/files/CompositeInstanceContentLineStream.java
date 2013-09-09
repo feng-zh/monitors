@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CompositeContentLineStream implements ContentLineStream,
+public class CompositeInstanceContentLineStream implements ContentLineStream,
 		FileInstanceChangeListener, FileContentChangedListener {
 
 	private Map<Integer, FileInstance> allInstances = new HashMap<Integer, FileInstance>();
@@ -38,9 +38,9 @@ public class CompositeContentLineStream implements ContentLineStream,
 	private String name;
 
 	private static final Logger log = LoggerFactory
-			.getLogger(CompositeContentLineStream.class);
+			.getLogger(CompositeInstanceContentLineStream.class);
 
-	public CompositeContentLineStream(String name, FileOpenOption openOption,
+	public CompositeInstanceContentLineStream(String name, FileOpenOption openOption,
 			ContentLineStreamProviderDelegator streamDelegator) {
 		this.name = name;
 		this.openOption = openOption;
@@ -63,6 +63,7 @@ public class CompositeContentLineStream implements ContentLineStream,
 			if (openOption.openOnTail()) {
 				log.debug("add file into last updated queue: {}", instance);
 				lastUpdateFiles.offer(instance);
+				fileUpdateNotifier.notifyCheck();
 			}
 		}
 	}
@@ -192,6 +193,9 @@ public class CompositeContentLineStream implements ContentLineStream,
 				log.trace("start take updated file from {}", name);
 				try {
 					file = fileUpdateNotifier.take();
+					if (file == null) {
+						continue;
+					}
 				} catch (EOFException e) {
 					return null;
 				}
@@ -224,8 +228,11 @@ public class CompositeContentLineStream implements ContentLineStream,
 						TimeUnit.NANOSECONDS);
 				nanoTimeout = totalNanoTimeout
 						- (System.nanoTime() - startNanoTime);
-				if (nanoTimeout <= 0 || file == null) {
+				if (nanoTimeout <= 0) {
 					break;
+				}
+				if (file == null) {
+					continue;
 				}
 			}
 			ContentLineStream stream = getContentStream(file);
@@ -250,22 +257,21 @@ public class CompositeContentLineStream implements ContentLineStream,
 	}
 
 	@Override
-	public void onFileInstanceCreated(FileInstance instance) {
+	public void onFileInstanceCreated(FileInstance instance,
+			FileChangeOption changeOption) {
 		addInstance(instance);
+		if (changeOption.isRenameOption()) {
+			notifyIfEmpty();
+		}
 	}
 
 	@Override
-	public void onFileInstanceDeleted(FileInstance instance) {
+	public void onFileInstanceDeleted(FileInstance instance,
+			FileChangeOption changeOption) {
 		removeInstance(instance);
-		notifyIfEmpty();
-	}
-
-	@Override
-	public void onFileInstanceRenamed(FileInstance oldInstance,
-			FileInstance newInstance) {
-		removeInstance(oldInstance);
-		addInstance(newInstance);
-		notifyIfEmpty();
+		if (!changeOption.isRenameOption()) {
+			notifyIfEmpty();
+		}
 	}
 
 	private void notifyIfEmpty() {
@@ -274,14 +280,6 @@ public class CompositeContentLineStream implements ContentLineStream,
 		} else {
 			fileUpdateNotifier.clearEmpty();
 		}
-	}
-
-	@Override
-	public void onFileInstancePackaged(FileInstance oldInstance,
-			FileInstance newInstance) {
-		removeInstance(oldInstance);
-		addInstance(newInstance);
-		notifyIfEmpty();
 	}
 
 	// This most operate on monitor thread

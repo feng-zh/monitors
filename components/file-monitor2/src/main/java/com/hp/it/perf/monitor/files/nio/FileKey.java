@@ -1,7 +1,6 @@
 package com.hp.it.perf.monitor.files.nio;
 
 import java.io.Serializable;
-import java.nio.file.Path;
 
 class FileKey implements Serializable {
 
@@ -10,21 +9,14 @@ class FileKey implements Serializable {
 	private final transient Object nativeKey;
 
 	private final Serializable serializableKey;
-	
-	private final Path path;
 
-	public FileKey(Object fileKey, Path path) {
+	public FileKey(Object fileKey) {
 		this.nativeKey = fileKey;
 		this.serializableKey = nativeKey.toString();
-		this.path = path;
 	}
 
 	public Object getFileKey() {
 		return nativeKey;
-	}
-	
-	public Path getPath() {
-		return path;
 	}
 
 	public Serializable getSerializableKey() {

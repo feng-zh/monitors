@@ -23,6 +23,8 @@ public class FileContentChangeQueue implements FileContentChangedListener,
 
 	private final Object EMPTY = new Object();
 
+	private final Object CHECK = new Object();
+
 	public FileContentChangeQueue(Object instancePropertyKey) {
 		if (instancePropertyKey == null) {
 			throw new IllegalArgumentException();
@@ -56,6 +58,8 @@ public class FileContentChangeQueue implements FileContentChangedListener,
 		if (index == this) {
 			updatedQueue.offer(index);
 			throw new IOException("closed change queue");
+		} else if (index == CHECK) {
+			return null;
 		} else if (index == EMPTY) {
 			updatedQueue.offer(index);
 			throw new EOFException("no more instance");
@@ -71,6 +75,8 @@ public class FileContentChangeQueue implements FileContentChangedListener,
 		}
 		Object index = updatedQueue.poll(timeout, unit);
 		if (index == null) {
+			return null;
+		} else if (index == CHECK) {
 			return null;
 		} else if (index == EMPTY) {
 			updatedQueue.offer(index);
@@ -98,6 +104,8 @@ public class FileContentChangeQueue implements FileContentChangedListener,
 		Object index = updatedQueue.poll();
 		if (index == null) {
 			return null;
+		} else if (index == CHECK) {
+			return poll();
 		} else if (index == EMPTY) {
 			updatedQueue.offer(index);
 			return null;
@@ -116,6 +124,12 @@ public class FileContentChangeQueue implements FileContentChangedListener,
 	public void clearEmpty() {
 		if (updatedQueue.peek() == EMPTY) {
 			updatedQueue.poll();
+		}
+	}
+
+	public void notifyCheck() {
+		if (updatedQueue.isEmpty()) {
+			updatedQueue.offer(CHECK);
 		}
 	}
 

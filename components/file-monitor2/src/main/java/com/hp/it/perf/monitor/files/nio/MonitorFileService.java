@@ -117,6 +117,7 @@ class MonitorFileService implements Closeable, Runnable {
 				.currentThread().getName());
 		startGuard.release();
 		try {
+			// TODO what about error in loop
 			while (true) {
 				WatchKey key;
 				try {

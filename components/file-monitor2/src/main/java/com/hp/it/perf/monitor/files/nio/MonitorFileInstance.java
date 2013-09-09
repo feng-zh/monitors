@@ -118,7 +118,8 @@ class MonitorFileInstance implements FileInstance, ContentLineStreamProvider {
 
 	@Override
 	public String toString() {
-		return String.format("MonitorFileInstance [file=%s]", file);
+		return String.format("MonitorFileInstance [file=%s@%s]",
+				file.getPath(), hashCode());
 	}
 
 	@Override

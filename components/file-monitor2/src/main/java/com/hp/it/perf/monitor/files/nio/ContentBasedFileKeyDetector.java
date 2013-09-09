@@ -11,8 +11,6 @@ import java.nio.file.WatchEvent.Kind;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -184,7 +182,7 @@ class ContentBasedFileKeyDetector implements FileKeyDetector {
 					BasicFileAttributes.class);
 			modified = attr.lastModifiedTime().toMillis();
 			length = attr.size();
-			nativeKey = new FileKey(attr.fileKey(), name);
+			nativeKey = new FileKey(attr.fileKey());
 			regularFile = attr.isRegularFile();
 		}
 
@@ -587,6 +585,8 @@ class ContentBasedFileKeyDetector implements FileKeyDetector {
 				events.size() * 2);
 		for (int index = 0, n = events.size(); index < n; index++) {
 			WatchEvent<?> event = events.get(index);
+			Path contextPath = (Path) event.context();
+			Path eventPath = watchPath.resolve(contextPath);
 			Kind<?> eventKind = event.kind();
 			FileInfoEntry currentInfoEntry = currentEntries[index];
 			if (currentInfoEntry != null && !currentInfoEntry.isRegularFile()) {
@@ -602,25 +602,27 @@ class ContentBasedFileKeyDetector implements FileKeyDetector {
 				// check if file real deleted or renamed
 				if (historyInfoEntry == null || currentValue < 0) {
 					// not exist presently, keep this delete event
-					list.add(new WatchEventKeys(event, historyNativeKey, null));
+					list.add(new WatchEventKeys(event, historyNativeKey,
+							eventPath, null, null));
 				} else {
 					// exist
 					list.add(new WatchEventKeys(new DelegateWatchEvent(
 							MonitorFolderEntry.ENTRY_RENAME_FROM, event),
-							historyNativeKey,
-							toNativeFileKey(currentEntries[currentValue])));
+							historyNativeKey, eventPath,
+							toNativeFileKey(currentEntries[currentValue]),
+							toPath(currentEntries[currentValue])));
 				}
 			} else if (eventKind == StandardWatchEventKinds.ENTRY_MODIFY) {
 				// check if file still exist
 				if (currentInfoEntry == null) {
 					// native mode, keep it
 					list.add(new WatchEventKeys(event, historyNativeKey,
-							currentNativeKey));
+							eventPath, currentNativeKey, eventPath));
 				} else {
 					if (currentValue == index) {
 						// real modify, keep it
 						list.add(new WatchEventKeys(event, historyNativeKey,
-								currentNativeKey));
+								eventPath, currentNativeKey, eventPath));
 					} else {
 						if (currentValue >= 0) {
 							// exist
@@ -630,13 +632,16 @@ class ContentBasedFileKeyDetector implements FileKeyDetector {
 											MonitorFolderEntry.ENTRY_RENAME_FROM,
 											event),
 									historyNativeKey,
-									toNativeFileKey(currentEntries[currentValue])));
+									eventPath,
+									toNativeFileKey(currentEntries[currentValue]),
+									toPath(currentEntries[currentValue])));
 						} else {
 							// not exist
 							list.add(new WatchEventKeys(
 									new DelegateWatchEvent(
 											StandardWatchEventKinds.ENTRY_DELETE,
-											event), historyNativeKey, null));
+											event), historyNativeKey,
+									eventPath, null, null));
 						}
 						if (historyValue >= 0) {
 							// and some renamed to this
@@ -645,12 +650,14 @@ class ContentBasedFileKeyDetector implements FileKeyDetector {
 											MonitorFolderEntry.ENTRY_RENAME_TO,
 											event),
 									toNativeFileKey(historyEntries[historyValue]),
-									currentNativeKey));
+									toPath(historyEntries[historyValue]),
+									currentNativeKey, eventPath));
 						} else {
 							list.add(new WatchEventKeys(
 									new DelegateWatchEvent(
 											StandardWatchEventKinds.ENTRY_CREATE,
-											event), null, currentNativeKey));
+											event), null, null,
+									currentNativeKey, eventPath));
 						}
 					}
 				}
@@ -658,54 +665,35 @@ class ContentBasedFileKeyDetector implements FileKeyDetector {
 				// check if file still exist
 				if (currentInfoEntry == null) {
 					// native mode, keep it
-					list.add(new WatchEventKeys(event, historyNativeKey,
-							currentNativeKey));
+					list.add(new WatchEventKeys(event, historyNativeKey, null,
+							currentNativeKey, eventPath));
 				} else {
 					if (historyValue >= 0) {
 						// previous exists
 						FileKey prevNativeKey = toNativeFileKey(historyEntries[historyValue]);
 						list.add(new WatchEventKeys(new DelegateWatchEvent(
 								MonitorFolderEntry.ENTRY_RENAME_TO, event),
-								prevNativeKey, currentNativeKey));
+								prevNativeKey,
+								toPath(historyEntries[historyValue]),
+								currentNativeKey, eventPath));
 					} else {
 						// new created
-						list.add(new WatchEventKeys(event, null,
-								currentNativeKey));
+						list.add(new WatchEventKeys(event, null, null,
+								currentNativeKey, eventPath));
 					}
 				}
 			}
 		}
-		Collections.sort(list, new Comparator<WatchEventKeys>() {
-
-			@Override
-			public int compare(WatchEventKeys w1, WatchEventKeys w2) {
-				Kind<?> k1 = w1.event.kind();
-				Kind<?> k2 = w2.event.kind();
-				return Integer.compare(toOrdinal(k1), toOrdinal(k2));
-			}
-
-			private int toOrdinal(Kind<?> kind) {
-				// delete, rename-from, rename-to, create, modify
-				if (kind == StandardWatchEventKinds.ENTRY_MODIFY) {
-					return 5;
-				} else if (kind == MonitorFolderEntry.ENTRY_RENAME_TO) {
-					return 3;
-				} else if (kind == MonitorFolderEntry.ENTRY_RENAME_FROM) {
-					return 2;
-				} else if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
-					return 4;
-				} else if (kind == StandardWatchEventKinds.ENTRY_DELETE) {
-					return 1;
-				} else {
-					return 0;
-				}
-			}
-		});
+		NativeFileKeyDetector.postProcess(list);
 		return list;
 	}
 
 	private FileKey toNativeFileKey(FileInfoEntry infoEntry) {
 		return infoEntry != null ? infoEntry.nativeKey : null;
+	}
+
+	private Path toPath(FileInfoEntry infoEntry) {
+		return infoEntry != null ? infoEntry.name : null;
 	}
 
 }
