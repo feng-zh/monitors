@@ -138,7 +138,7 @@ public class SshfsTestCase {
 		lineStream.close();
 	}
 
-	@Test
+	@Test(timeout = 5000)
 	public void testFileMoreRenameRotate() throws Exception {
 		StringBuffer sb = new StringBuffer();
 		Random random = new Random();

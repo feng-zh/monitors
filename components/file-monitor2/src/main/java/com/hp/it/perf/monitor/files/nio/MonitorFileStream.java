@@ -13,12 +13,12 @@ import org.slf4j.LoggerFactory;
 
 import com.hp.it.perf.monitor.files.ContentLine;
 import com.hp.it.perf.monitor.files.ContentLineStream;
-import com.hp.it.perf.monitor.files.FileContentChangedListener;
+import com.hp.it.perf.monitor.files.FileContentChangeListener;
 import com.hp.it.perf.monitor.files.FileInstance;
 import com.hp.it.perf.monitor.files.FileInstanceChangeListener;
 
 class MonitorFileStream implements ContentLineStream,
-		FileContentChangedListener, FileInstanceChangeListener {
+		FileContentChangeListener, FileInstanceChangeListener {
 
 	private RandomAccessFileReader reader;
 
@@ -49,7 +49,7 @@ class MonitorFileStream implements ContentLineStream,
 		reader.open(initOffset, lazyOpen);
 		fileInstance.addFileInstanceChangeListener(this);
 		if (monitorable) {
-			fileInstance.getFileSet().addFileContentChangeListener(this);
+			fileInstance.addFileContentChangeListener(this);
 		}
 	}
 
@@ -189,7 +189,7 @@ class MonitorFileStream implements ContentLineStream,
 	private void closeMonitor() {
 		if (monitorable) {
 			log.debug("close file monitor on {}", fileInstance);
-			fileInstance.getFileSet().removeFileContentChangeListener(this);
+			fileInstance.removeFileContentChangeListener(this);
 			lock.lock();
 			try {
 				noChanged.signalAll();

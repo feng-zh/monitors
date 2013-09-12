@@ -8,16 +8,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-public class FileContentChangeQueue implements FileContentChangedListener,
-		Closeable {
+public class FileContentChangeQueue<T> implements Closeable {
 
 	// accessed by different threads
 	private BlockingQueue<Object> updatedQueue = new LinkedBlockingQueue<Object>();
 
 	// accessed by different threads
-	private ConcurrentHashMap<Object, FileInstance> checker = new ConcurrentHashMap<Object, FileInstance>();
+	private ConcurrentHashMap<Object, T> checker = new ConcurrentHashMap<Object, T>();
 
-	private final Object instancePropertyKey;
+	private ConcurrentHashMap<T, ContentChangeListener> listeners = new ConcurrentHashMap<T, ContentChangeListener>();
 
 	private volatile boolean closed;
 
@@ -25,32 +24,38 @@ public class FileContentChangeQueue implements FileContentChangedListener,
 
 	private final Object CHECK = new Object();
 
-	public FileContentChangeQueue(Object instancePropertyKey) {
-		if (instancePropertyKey == null) {
-			throw new IllegalArgumentException();
+	private class ContentChangeListener implements FileContentChangeListener {
+
+		private T provider;
+
+		ContentChangeListener(T provider) {
+			this.provider = provider;
 		}
-		this.instancePropertyKey = instancePropertyKey;
+
+		@Override
+		public void onContentChanged(FileInstance instance) {
+			fireContentChanged(provider, instance);
+		}
+
 	}
 
-	@Override
-	public void onContentChanged(FileInstance instance) {
+	private void fireContentChanged(T provider, FileInstance instance) {
 		if (closed) {
 			// ignore if closed
 			// TODO log to detect listener not unregister
 			return;
 		}
-		Object index = instance.getClientProperty(instancePropertyKey);
+		Object index = provider;
 		if (index == null) {
 			// ignore
 			return;
 		}
-		if (checker.putIfAbsent(index, instance) == null) {
+		if (checker.putIfAbsent(index, provider) == null) {
 			updatedQueue.offer(index);
 		}
 	}
 
-	public FileInstance take() throws InterruptedException, IOException,
-			EOFException {
+	public T take() throws InterruptedException, IOException, EOFException {
 		if (closed) {
 			throw new IOException("closed change queue");
 		}
@@ -68,8 +73,8 @@ public class FileContentChangeQueue implements FileContentChangedListener,
 		}
 	}
 
-	public FileInstance poll(long timeout, TimeUnit unit)
-			throws InterruptedException, IOException, EOFException {
+	public T poll(long timeout, TimeUnit unit) throws InterruptedException,
+			IOException, EOFException {
 		if (closed) {
 			throw new IOException("closed change queue");
 		}
@@ -97,7 +102,7 @@ public class FileContentChangeQueue implements FileContentChangedListener,
 		}
 	}
 
-	public FileInstance poll() throws IOException {
+	public T poll() throws IOException {
 		if (closed) {
 			throw new IOException("closed change queue");
 		}
@@ -130,6 +135,25 @@ public class FileContentChangeQueue implements FileContentChangedListener,
 	public void notifyCheck() {
 		if (updatedQueue.isEmpty()) {
 			updatedQueue.offer(CHECK);
+		}
+	}
+
+	public void addFileContentChangeAware(T provider) {
+		removeFileContentChangeAware(provider);
+		ContentChangeListener listener = new ContentChangeListener(provider);
+		((ContentLineStreamProvider) provider)
+				.addFileContentChangeListener(listener);
+		listeners.put(provider, listener);
+	}
+
+	public void removeFileContentChangeAware(T provider) {
+		if (!(provider instanceof ContentLineStreamProvider)) {
+			throw new ClassCastException();
+		}
+		ContentChangeListener oldListener = listeners.remove(provider);
+		if (oldListener != null) {
+			((ContentLineStreamProvider) provider)
+					.removeFileContentChangeListener(oldListener);
 		}
 	}
 

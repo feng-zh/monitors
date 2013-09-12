@@ -1,6 +1,6 @@
 package com.hp.it.perf.monitor.files;
 
-public interface FileContentChangedListener {
+public interface FileContentChangeListener {
 
 	public void onContentChanged(FileInstance instance);
 

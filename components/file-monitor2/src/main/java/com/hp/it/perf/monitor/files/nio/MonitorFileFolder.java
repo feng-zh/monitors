@@ -20,7 +20,8 @@ import com.hp.it.perf.monitor.files.ContentLineStreamProviderDelegator;
 import com.hp.it.perf.monitor.files.DefaultFileStatistics;
 import com.hp.it.perf.monitor.files.FileCluster;
 import com.hp.it.perf.monitor.files.FileClusterStrategy;
-import com.hp.it.perf.monitor.files.FileContentChangedListener;
+import com.hp.it.perf.monitor.files.FileContentChangeAwareProxy;
+import com.hp.it.perf.monitor.files.FileContentChangeListener;
 import com.hp.it.perf.monitor.files.FileInstance;
 import com.hp.it.perf.monitor.files.FileInstanceChangeAwareProxy;
 import com.hp.it.perf.monitor.files.FileInstanceChangeListener;
@@ -31,9 +32,9 @@ import com.hp.it.perf.monitor.files.FileSet;
 class MonitorFileFolder implements FileSet, ContentLineStreamProvider,
 		ContentLineStreamProviderDelegator {
 
-	private final FileInstanceChangeAwareProxy proxy = new FileInstanceChangeAwareProxy();
+	private final FileInstanceChangeAwareProxy instanceChangeProxy = new FileInstanceChangeAwareProxy();
 
-	private List<FileContentChangedListener> listenerList = new CopyOnWriteArrayList<FileContentChangedListener>();
+	private final FileContentChangeAwareProxy contentChangeProxy = new FileContentChangeAwareProxy();
 
 	private final File folder;
 
@@ -90,10 +91,11 @@ class MonitorFileFolder implements FileSet, ContentLineStreamProvider,
 		}
 		MonitorFileCluster fileCluster = clusterMap.get(clusterName);
 		if (fileCluster == null) {
-			fileCluster = new MonitorFileCluster(clusterName, this);
+			fileCluster = new MonitorFileCluster(clusterName, folder, this);
 			clusterMap.put(clusterName, fileCluster);
 			statistics.fileClusterCount().increment();
 			addFileInstanceChangeListener(fileCluster);
+			addFileContentChangeListener(fileCluster);
 		}
 		MonitorFileInstance fileInstance = new MonitorFileInstance(
 				file.getName(), clusterName, this);
@@ -105,13 +107,13 @@ class MonitorFileFolder implements FileSet, ContentLineStreamProvider,
 	@Override
 	public void addFileInstanceChangeListener(
 			FileInstanceChangeListener listener) {
-		proxy.addFileInstanceChangeListener(listener);
+		instanceChangeProxy.addFileInstanceChangeListener(listener);
 	}
 
 	@Override
 	public void removeFileInstanceChangeListener(
 			FileInstanceChangeListener listener) {
-		proxy.removeFileInstanceChangeListener(listener);
+		instanceChangeProxy.removeFileInstanceChangeListener(listener);
 	}
 
 	@Override
@@ -132,35 +134,35 @@ class MonitorFileFolder implements FileSet, ContentLineStreamProvider,
 			@Override
 			protected void onClosing() {
 				removeFileInstanceChangeListener(this);
-				removeFileContentChangeListener(this);
 			}
 
 		};
 		addFileInstanceChangeListener(contentStream);
-		addFileContentChangeListener(contentStream);
 		for (FileInstance instance : instanceList) {
 			contentStream.addFileInstance(instance);
 		}
 		return contentStream;
 	}
 
-	public void addFileContentChangeListener(FileContentChangedListener listener) {
-		listenerList.add(listener);
+	@Override
+	public void addFileContentChangeListener(FileContentChangeListener listener) {
+		contentChangeProxy.addFileContentChangeListener(listener);
 	}
 
+	@Override
 	public void removeFileContentChangeListener(
-			FileContentChangedListener listener) {
-		listenerList.remove(listener);
+			FileContentChangeListener listener) {
+		contentChangeProxy.removeFileContentChangeListener(listener);
 	}
 
 	void onFileInstanceCreated(FileInstance instance, FileChangeOption option) {
 		addInstance(instance);
-		proxy.onFileInstanceCreated(instance, option);
+		instanceChangeProxy.onFileInstanceCreated(instance, option);
 	}
 
 	void onFileInstanceDeleted(FileInstance instance, FileChangeOption option) {
 		List<FileInstanceChangeListener> removingListeners = preRemoveInstance(instance);
-		proxy.onFileInstanceDeleted(instance, option);
+		instanceChangeProxy.onFileInstanceDeleted(instance, option);
 		postRemoveInstance(instance, removingListeners);
 	}
 
@@ -169,11 +171,14 @@ class MonitorFileFolder implements FileSet, ContentLineStreamProvider,
 		log.debug("pre-removing file instance {}", instance);
 		List<FileInstanceChangeListener> internalListeners = new ArrayList<FileInstanceChangeListener>();
 		MonitorFileInstance fileInstance = (MonitorFileInstance) instance;
-		internalListeners.add(fileInstance.getChangeListener());
+		removeFileContentChangeListener(fileInstance.getContentChangeListener());
+		internalListeners.add(fileInstance.getInstanceChangeListener());
 		MonitorFileCluster fileCluster = (MonitorFileCluster) fileInstance
 				.getFileCluster();
 		fileCluster.removeFileInstance(fileInstance);
+		removeFileContentChangeListener(fileCluster);
 		fileInstance.metadata().invalid();
+		contentChangeProxy.removeFileInstance(instance);
 		instanceList.remove(fileInstance);
 		if (fileCluster.isEmpty()) {
 			clusterMap.remove(fileCluster.getName());
@@ -199,15 +204,15 @@ class MonitorFileFolder implements FileSet, ContentLineStreamProvider,
 		fileInstance.getMetadata(true);
 		((MonitorFileCluster) fileInstance.getFileCluster())
 				.addFileInstance(fileInstance);
-		addFileInstanceChangeListener(fileInstance.getChangeListener());
+		contentChangeProxy.addFileInstance(fileInstance);
+		addFileInstanceChangeListener(fileInstance.getInstanceChangeListener());
+		addFileContentChangeListener(fileInstance.getContentChangeListener());
 	}
 
 	void onContentChanged(FileInstance instance) {
 		MonitorFileInstance fileInstance = (MonitorFileInstance) instance;
 		fileInstance.metadata().markUpdated();
-		for (FileContentChangedListener listener : listenerList) {
-			listener.onContentChanged(instance);
-		}
+		contentChangeProxy.onContentChanged(instance);
 	}
 
 	File getFolder() {

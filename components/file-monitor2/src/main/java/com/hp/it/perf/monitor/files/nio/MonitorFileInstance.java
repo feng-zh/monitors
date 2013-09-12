@@ -10,6 +10,8 @@ import com.hp.it.perf.monitor.files.ContentLineStream;
 import com.hp.it.perf.monitor.files.ContentLineStreamProvider;
 import com.hp.it.perf.monitor.files.DefaultFileStatistics;
 import com.hp.it.perf.monitor.files.FileCluster;
+import com.hp.it.perf.monitor.files.FileContentChangeAwareProxy.SingleFileContentChangeAwareProxy;
+import com.hp.it.perf.monitor.files.FileContentChangeListener;
 import com.hp.it.perf.monitor.files.FileInstance;
 import com.hp.it.perf.monitor.files.FileInstanceChangeAwareProxy.SingleFileInstanceChangeAwareProxy;
 import com.hp.it.perf.monitor.files.FileInstanceChangeListener;
@@ -18,7 +20,10 @@ import com.hp.it.perf.monitor.files.FileOpenOption;
 
 class MonitorFileInstance implements FileInstance, ContentLineStreamProvider {
 
-	private final SingleFileInstanceChangeAwareProxy proxy = new SingleFileInstanceChangeAwareProxy(
+	private final SingleFileInstanceChangeAwareProxy instanceChangeProxy = new SingleFileInstanceChangeAwareProxy(
+			this);
+
+	private final SingleFileContentChangeAwareProxy contentChangeProxy = new SingleFileContentChangeAwareProxy(
 			this);
 
 	private final File file;
@@ -44,16 +49,20 @@ class MonitorFileInstance implements FileInstance, ContentLineStreamProvider {
 		}
 	}
 
+	FileContentChangeListener getContentChangeListener() {
+		return contentChangeProxy;
+	}
+
 	@Override
 	public void addFileInstanceChangeListener(
 			FileInstanceChangeListener listener) {
-		proxy.addFileInstanceChangeListener(listener);
+		instanceChangeProxy.addFileInstanceChangeListener(listener);
 	}
 
 	@Override
 	public void removeFileInstanceChangeListener(
 			FileInstanceChangeListener listener) {
-		proxy.removeFileInstanceChangeListener(listener);
+		instanceChangeProxy.removeFileInstanceChangeListener(listener);
 	}
 
 	@Override
@@ -108,8 +117,8 @@ class MonitorFileInstance implements FileInstance, ContentLineStreamProvider {
 		return file;
 	}
 
-	FileInstanceChangeListener getChangeListener() {
-		return proxy;
+	FileInstanceChangeListener getInstanceChangeListener() {
+		return instanceChangeProxy;
 	}
 
 	DefaultFileStatistics getStatistics() {
@@ -137,6 +146,17 @@ class MonitorFileInstance implements FileInstance, ContentLineStreamProvider {
 
 	MonitorFileMetadata metadata() {
 		return metadata;
+	}
+
+	@Override
+	public void addFileContentChangeListener(FileContentChangeListener listener) {
+		contentChangeProxy.addFileContentChangeListener(listener);
+	}
+
+	@Override
+	public void removeFileContentChangeListener(
+			FileContentChangeListener listener) {
+		contentChangeProxy.removeFileContentChangeListener(listener);
 	}
 
 }

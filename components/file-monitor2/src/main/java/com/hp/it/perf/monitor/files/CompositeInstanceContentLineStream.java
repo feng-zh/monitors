@@ -14,7 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class CompositeInstanceContentLineStream implements ContentLineStream,
-		FileInstanceChangeListener, FileContentChangedListener {
+		FileInstanceChangeListener {
 
 	private Map<Integer, FileInstance> allInstances = new HashMap<Integer, FileInstance>();
 
@@ -24,8 +24,7 @@ public class CompositeInstanceContentLineStream implements ContentLineStream,
 
 	private final Object streamTracker = new Object();
 
-	private final FileContentChangeQueue fileUpdateNotifier = new FileContentChangeQueue(
-			instanceTracker);
+	private final FileContentChangeQueue<FileInstance> fileUpdateNotifier = new FileContentChangeQueue<FileInstance>();
 
 	private Deque<FileInstance> lastUpdateFiles = new LinkedList<FileInstance>();
 
@@ -40,7 +39,8 @@ public class CompositeInstanceContentLineStream implements ContentLineStream,
 	private static final Logger log = LoggerFactory
 			.getLogger(CompositeInstanceContentLineStream.class);
 
-	public CompositeInstanceContentLineStream(String name, FileOpenOption openOption,
+	public CompositeInstanceContentLineStream(String name,
+			FileOpenOption openOption,
 			ContentLineStreamProviderDelegator streamDelegator) {
 		this.name = name;
 		this.openOption = openOption;
@@ -146,6 +146,7 @@ public class CompositeInstanceContentLineStream implements ContentLineStream,
 		if (stream == null) {
 			stream = streamDelegator.openLineStream(file, openOption);
 			file.putClientProperty(streamTracker, stream);
+			fileUpdateNotifier.addFileContentChangeAware(file);
 		}
 		return stream;
 	}
@@ -154,6 +155,13 @@ public class CompositeInstanceContentLineStream implements ContentLineStream,
 	public void close() throws IOException {
 		if (!closed) {
 			closed = true;
+			for (FileInstance file : allInstances.values()) {
+				ContentLineStream stream = (ContentLineStream) file
+						.getClientProperty(streamTracker);
+				if (stream != null) {
+					fileUpdateNotifier.removeFileContentChangeAware(file);
+				}
+			}
 			onClosing();
 			close(fileUpdateNotifier);
 			for (FileInstance file : allInstances.values()) {
@@ -282,11 +290,4 @@ public class CompositeInstanceContentLineStream implements ContentLineStream,
 		}
 	}
 
-	// This most operate on monitor thread
-	@Override
-	public void onContentChanged(FileInstance instance) {
-		if (!closed) {
-			fileUpdateNotifier.onContentChanged(instance);
-		}
-	}
 }

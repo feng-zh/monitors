@@ -11,20 +11,12 @@ public class FileInstanceChangeAwareProxy implements FileInstanceChangeAware,
 
 	private List<FileInstanceChangeListener> listenerList = new CopyOnWriteArrayList<FileInstanceChangeListener>();
 
-	private Map<FileInstance, List<SingleFileInstanceChangeListener>> singleListenerMap = new ConcurrentHashMap<FileInstance, List<SingleFileInstanceChangeListener>>();
+	private Map<FileInstance, List<FileInstanceChangeListener>> singleListenerMap = new ConcurrentHashMap<FileInstance, List<FileInstanceChangeListener>>();
 
 	private FileInstance filter;
 
-	public interface SingleFileInstanceChangeListener extends
-			FileInstanceChangeListener {
-
-		public FileInstance getFileInstance();
-
-	}
-
 	static public class SingleFileInstanceChangeAwareProxy extends
-			FileInstanceChangeAwareProxy implements
-			SingleFileInstanceChangeListener {
+			FileInstanceChangeAwareProxy implements SingleFileIntanceProvider {
 
 		private FileInstance instance;
 
@@ -50,11 +42,11 @@ public class FileInstanceChangeAwareProxy implements FileInstanceChangeAware,
 	@Override
 	final public void addFileInstanceChangeListener(
 			FileInstanceChangeListener listener) {
-		if (listener instanceof SingleFileInstanceChangeListener) {
-			SingleFileInstanceChangeListener singleListener = (SingleFileInstanceChangeListener) listener;
-			List<SingleFileInstanceChangeListener> list = listOfSingleListener(
+		if (listener instanceof SingleFileIntanceProvider) {
+			SingleFileIntanceProvider singleListener = (SingleFileIntanceProvider) listener;
+			List<FileInstanceChangeListener> list = listOfSingleListener(
 					singleListener.getFileInstance(), true);
-			list.add(singleListener);
+			list.add(listener);
 		} else {
 			listenerList.add(listener);
 		}
@@ -63,12 +55,12 @@ public class FileInstanceChangeAwareProxy implements FileInstanceChangeAware,
 	@Override
 	final public void removeFileInstanceChangeListener(
 			FileInstanceChangeListener listener) {
-		if (listener instanceof SingleFileInstanceChangeListener) {
-			SingleFileInstanceChangeListener singleListener = (SingleFileInstanceChangeListener) listener;
-			List<SingleFileInstanceChangeListener> list = listOfSingleListener(
+		if (listener instanceof SingleFileIntanceProvider) {
+			SingleFileIntanceProvider singleListener = (SingleFileIntanceProvider) listener;
+			List<FileInstanceChangeListener> list = listOfSingleListener(
 					singleListener.getFileInstance(), false);
 			if (!list.isEmpty()) {
-				list.remove(singleListener);
+				list.remove(listener);
 			}
 			if (list.isEmpty()) {
 				singleListenerMap.remove(singleListener.getFileInstance());
@@ -78,13 +70,12 @@ public class FileInstanceChangeAwareProxy implements FileInstanceChangeAware,
 		}
 	}
 
-	private List<SingleFileInstanceChangeListener> listOfSingleListener(
+	private List<FileInstanceChangeListener> listOfSingleListener(
 			FileInstance instance, boolean create) {
-		List<SingleFileInstanceChangeListener> list = singleListenerMap
-				.get(instance);
+		List<FileInstanceChangeListener> list = singleListenerMap.get(instance);
 		if (list == null) {
 			if (create) {
-				list = new CopyOnWriteArrayList<SingleFileInstanceChangeListener>();
+				list = new CopyOnWriteArrayList<FileInstanceChangeListener>();
 				singleListenerMap.put(instance, list);
 			} else {
 				list = Collections.emptyList();
