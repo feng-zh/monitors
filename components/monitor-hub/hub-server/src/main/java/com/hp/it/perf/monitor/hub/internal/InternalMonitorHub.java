@@ -74,7 +74,7 @@ public class InternalMonitorHub implements MonitorHub {
 			}
 		}
 		subscribers.put(subscriber, internalSubscriber);
-		HubEvent hubEvent = new HubEvent(this, HubStatus.Connected,
+		HubEvent hubEvent = new HubEvent(this, HubStatus.Connected, null,
 				"start subscribe");
 		internalSubscriber.startSubscribe(hubEvent);
 	}
@@ -85,7 +85,7 @@ public class InternalMonitorHub implements MonitorHub {
 				.remove(subscriber);
 		if (internalSubscriber != null) {
 			HubEvent hubEvent = new HubEvent(this, HubStatus.Disconnected,
-					"stop subscribe");
+					null, "stop subscribe");
 			internalSubscriber.stopSubscribe(hubEvent);
 			internalSubscriber.removeProcessors();
 		}
