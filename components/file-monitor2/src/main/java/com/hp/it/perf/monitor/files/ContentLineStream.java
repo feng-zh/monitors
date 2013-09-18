@@ -12,6 +12,7 @@ public interface ContentLineStream extends Closeable {
 	public ContentLine poll() throws IOException;
 
 	// blocking operation
+	// null if EOF
 	public ContentLine take() throws IOException, InterruptedException;
 
 	public ContentLine poll(long timeout, TimeUnit unit) throws IOException,
@@ -22,5 +23,7 @@ public interface ContentLineStream extends Closeable {
 			throws IOException;
 
 	public void close() throws IOException;
+
+	public void setSourceObserver(ContentLineSourceObserver sourceObserver);
 
 }

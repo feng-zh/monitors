@@ -72,15 +72,7 @@ class MonitorFileCluster implements FileCluster, ContentLineStreamProvider,
 	@Override
 	public ContentLineStream open(FileOpenOption option) throws IOException {
 		final CompositeInstanceContentLineStream contentStream = new CompositeInstanceContentLineStream(
-				"cluster " + name + "@" + folder, option, delegator) {
-
-			@Override
-			protected void onClosing() {
-				removeFileInstanceChangeListener(this);
-			}
-
-		};
-		addFileInstanceChangeListener(contentStream);
+				"cluster " + name + "@" + folder, option, delegator, this);
 		for (FileInstance instance : instanceList) {
 			contentStream.addFileInstance(instance);
 		}

@@ -35,6 +35,7 @@ public class FileOpenOptionBuilder {
 			public boolean monitor() {
 				return !noMonitor;
 			}
+
 		};
 	}
 

@@ -129,15 +129,7 @@ class MonitorFileFolder implements FileSet, ContentLineStreamProvider,
 	@Override
 	public ContentLineStream open(FileOpenOption option) throws IOException {
 		final CompositeInstanceContentLineStream contentStream = new CompositeInstanceContentLineStream(
-				"folder " + folder, option, this) {
-
-			@Override
-			protected void onClosing() {
-				removeFileInstanceChangeListener(this);
-			}
-
-		};
-		addFileInstanceChangeListener(contentStream);
+				"folder " + folder, option, this, this);
 		for (FileInstance instance : instanceList) {
 			contentStream.addFileInstance(instance);
 		}

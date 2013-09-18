@@ -195,8 +195,7 @@ class FileTeseBuilder implements Closeable {
 				}
 				// ignore jacoco threads
 				if (t.getThreadGroup().getName().equals("main")
-						&& t.getName()
-								.equals("org.jacoco.agent.rt_kqcpih.controller.TcpClientController")) {
+						&& t.getName().startsWith("org.jacoco.agent")) {
 					continue;
 				}
 			}

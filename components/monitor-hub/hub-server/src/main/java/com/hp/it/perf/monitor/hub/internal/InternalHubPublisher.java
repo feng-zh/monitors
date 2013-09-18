@@ -1,6 +1,7 @@
 package com.hp.it.perf.monitor.hub.internal;
 
 import com.hp.it.perf.monitor.hub.GatewayPayload;
+import com.hp.it.perf.monitor.hub.GatewayStatus;
 import com.hp.it.perf.monitor.hub.HubPublishOption;
 import com.hp.it.perf.monitor.hub.HubPublisher;
 
@@ -37,6 +38,14 @@ class InternalHubPublisher implements HubPublisher {
 			closed = true;
 			processor.removePublisher(this);
 		}
+	}
+
+	@Override
+	public void update(GatewayStatus status) {
+		if (closed) {
+			throw new IllegalStateException("closed publisher");
+		}
+		processor.onStatus(this, status);
 	}
 
 }

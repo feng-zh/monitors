@@ -6,8 +6,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 
+import com.hp.it.perf.monitor.hub.GatewayStatus;
 import com.hp.it.perf.monitor.hub.HubEvent;
 import com.hp.it.perf.monitor.hub.HubEvent.HubStatus;
 import com.hp.it.perf.monitor.hub.HubPublishOption;
@@ -19,7 +21,7 @@ import com.hp.it.perf.monitor.hub.MonitorHub;
 
 public class InternalMonitorHub implements MonitorHub {
 
-	private Map<MonitorEndpoint, InternalHubProcessor> endpoints = new ConcurrentHashMap<MonitorEndpoint, InternalHubProcessor>();
+	private ConcurrentMap<MonitorEndpoint, InternalHubProcessor> endpoints = new ConcurrentHashMap<MonitorEndpoint, InternalHubProcessor>();
 
 	private Map<HubSubscriber, InternalHubSubscriber> subscribers = new ConcurrentHashMap<HubSubscriber, InternalHubSubscriber>();
 
@@ -94,22 +96,35 @@ public class InternalMonitorHub implements MonitorHub {
 	@Override
 	public HubPublisher createPublisher(MonitorEndpoint endpoint,
 			HubPublishOption option) {
-		// TODO put if absent
-		InternalHubProcessor processor = endpoints.get(endpoint);
-		if (processor == null) {
-			processor = new InternalHubProcessor(endpoint, new Executor() {
+		InternalHubProcessor processor = new InternalHubProcessor(this,
+				endpoint, new Executor() {
 
-				@Override
-				public void execute(Runnable command) {
-					command.run();
-				}
-			});
-			endpoints.put(endpoint, processor);
-		}
+					@Override
+					public void execute(Runnable command) {
+						command.run();
+					}
+				});
+		endpoints.putIfAbsent(endpoint, processor);
+		processor = endpoints.get(endpoint);
 		InternalHubPublisher publisher = new InternalHubPublisher(processor,
 				option);
 		processor.addPublisher(publisher);
 		return publisher;
 	}
 
+	void broadcastStatus(MonitorEndpoint broadcast, MonitorEndpoint endpoint,
+			GatewayStatus status) {
+		HubEvent event = new HubEvent(this, HubStatus.EndpointBroadcast,
+				endpoint, status);
+		if (broadcast != null) {
+			InternalHubProcessor processor = endpoints.get(broadcast);
+			if (processor != null) {
+				processor.onHubEvent(event);
+			}
+		} else {
+			for (InternalHubProcessor processor : endpoints.values()) {
+				processor.onHubEvent(event);
+			}
+		}
+	}
 }

@@ -10,7 +10,6 @@ import java.util.Hashtable;
 import java.util.Map;
 
 import javax.management.JMException;
-import javax.management.ObjectName;
 import javax.management.remote.JMXConnectorServer;
 import javax.management.remote.JMXConnectorServerFactory;
 import javax.management.remote.JMXServiceURL;
@@ -18,6 +17,7 @@ import javax.management.remote.rmi.RMIConnectorServer;
 import javax.naming.Context;
 
 import com.hp.it.perf.monitor.files.ContentLine;
+import com.hp.it.perf.monitor.files.ContentLineSourceObserver;
 import com.hp.it.perf.monitor.files.FileInstance;
 import com.hp.it.perf.monitor.files.FileInstanceFactory;
 import com.hp.it.perf.monitor.files.FileOpenOptionBuilder;
@@ -25,12 +25,20 @@ import com.hp.it.perf.monitor.files.FileSet;
 import com.hp.it.perf.monitor.files.SuperSetContentLineStream;
 import com.hp.it.perf.monitor.files.nio.MonitorFileFactory;
 import com.hp.it.perf.monitor.hub.GatewayPayload;
+import com.hp.it.perf.monitor.hub.GatewayStatus;
+import com.hp.it.perf.monitor.hub.HubEvent;
 import com.hp.it.perf.monitor.hub.HubPublisher;
+import com.hp.it.perf.monitor.hub.HubSubscriber;
 import com.hp.it.perf.monitor.hub.MonitorEndpoint;
+import com.hp.it.perf.monitor.hub.MonitorEvent;
+import com.hp.it.perf.monitor.hub.MonitorHub;
 import com.hp.it.perf.monitor.hub.internal.InternalMonitorHub;
+import com.hp.it.perf.monitor.hub.jmx.HubJMX;
+import com.hp.it.perf.monitor.hub.jmx.MonitorHubJmxFactory;
 import com.hp.it.perf.monitor.hub.jmx.MonitorHubService;
+import com.hp.it.perf.monitor.hub.support.DefaultHubSubscribeOption;
 
-public class FilesHubMain {
+public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 
 	private MonitorEndpoint endpoint;
 	private FileInstanceFactory fileFactory;
@@ -43,26 +51,31 @@ public class FilesHubMain {
 		this.fileFactory = new MonitorFileFactory();
 		this.superSetStream = new SuperSetContentLineStream(
 				new FileOpenOptionBuilder().lazyMode().tailMode().build());
+		this.superSetStream.setSourceObserver(this);
 	}
 
 	public void startPublish() throws JMException {
 		InternalMonitorHub coreHub = new InternalMonitorHub();
 		publisher = coreHub.createPublisher(endpoint, null);
 		setupJmxHub(coreHub);
+		testRead(connectorServer.getAddress(), endpoint);
 	}
 
 	private void setupJmxHub(InternalMonitorHub coreHub) throws JMException {
 		MonitorHubService jmxHub = new MonitorHubService(coreHub);
-		ManagementFactory.getPlatformMBeanServer().registerMBean(
-				jmxHub,
-				ObjectName.getInstance("com.hp.it.perf.monitor.hub", "type",
-						"MonitorHubService"));
+		jmxHub.setNotificationCompressDefault(true);
+		jmxHub.setNotificationOpenTypeDefault(false);
+		ManagementFactory.getPlatformMBeanServer().registerMBean(jmxHub,
+				HubJMX.getHubObjectName());
 	}
 
 	public void setupJMXConnectorServer() throws IOException {
 		String theHost = InetAddress.getLocalHost().getHostName();
 		int port = Integer.getInteger("monitor.rmi.port", 12099);
-		LocateRegistry.createRegistry(port);
+		try {
+			LocateRegistry.createRegistry(port);
+		} catch (Exception e) {
+		}
 		String theLocation = System.getProperty("monitor.jmx.location",
 				"filemonitor");
 		String serviceURL = "service:jmx:rmi:///jndi/rmi://" + theHost + ":"
@@ -93,7 +106,8 @@ public class FilesHubMain {
 	public static void main(String[] args) {
 		if (args.length < 2) {
 			System.err
-					.println("Need 'domain', and 'name' as first two arguements, like \"'hpsc' 'production'\".");
+					.println("ERROR: Need 'domain', and 'name' as first two arguements, like \"'hpsc' 'production'\".");
+			return;
 		}
 		FilesHubMain hubMain = new FilesHubMain(args[0], args[1]);
 		try {
@@ -101,6 +115,7 @@ public class FilesHubMain {
 				args = new String[] { args[0], args[1], "." };
 			}
 			hubMain.setupJMXConnectorServer();
+			hubMain.testReconnect();
 			boolean success = false;
 			for (int i = 2; i < args.length; i++) {
 				// TODO file name filter
@@ -164,6 +179,25 @@ public class FilesHubMain {
 		}
 	}
 
+	private void testReconnect() {
+		// new Thread(new Runnable() {
+		//
+		// @Override
+		// public void run() {
+		// while (true) {
+		// try {
+		// Thread.sleep(5000L);
+		// connectorServer.stop();
+		// Thread.sleep(10000L);
+		// setupJMXConnectorServer();
+		// } catch (Exception e) {
+		// e.printStackTrace();
+		// }
+		// }
+		// }
+		// }).start();
+	}
+
 	public void publish(ContentLine line, String source) {
 		GatewayPayload payload = new GatewayPayload();
 		payload.setContent(line.getLine());
@@ -195,9 +229,44 @@ public class FilesHubMain {
 			try {
 				closeable.close();
 			} catch (IOException e) {
+				// TODO
 				e.printStackTrace();
 			}
 		}
+	}
+
+	public void testRead(JMXServiceURL serviceUrl, MonitorEndpoint endpoint) {
+		MonitorHub client = MonitorHubJmxFactory.createHubJmxClient(serviceUrl,
+				null, HubJMX.getHubObjectName());
+		client.subscribe(this, new DefaultHubSubscribeOption(endpoint));
+	}
+
+	@Override
+	public void onData(MonitorEvent event) {
+		System.out.println(event.getContentSource() + ": "
+				+ new String((byte[]) event.getContent()));
+	}
+
+	@Override
+	public void onHubEvent(HubEvent event) {
+		System.out.println(event.getHub() + " - " + event.getStatus() + " - "
+				+ event.getData());
+	}
+
+	@Override
+	public void sourceFileCreated(FileInstance file, Object provider) {
+		GatewayStatus status = new GatewayStatus();
+		status.setStatus(0); // created
+		status.setContext(file.getFileSet().getPath() + "/" + file.getName());
+		publisher.update(status);
+	}
+
+	@Override
+	public void sourceFileDeleted(FileInstance file, Object provider) {
+		GatewayStatus status = new GatewayStatus();
+		status.setStatus(1); // deleted
+		status.setContext(file.getFileSet().getPath() + "/" + file.getName());
+		publisher.update(status);
 	}
 
 }

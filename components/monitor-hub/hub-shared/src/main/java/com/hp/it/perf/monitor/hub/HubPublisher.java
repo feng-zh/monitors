@@ -6,6 +6,8 @@ public interface HubPublisher extends Closeable {
 
 	public void post(GatewayPayload... payloads);
 
+	public void update(GatewayStatus status);
+
 	public void close();
 
 }

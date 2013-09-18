@@ -49,5 +49,11 @@
   		<artifactId>hub-server</artifactId>
   		<version>0.0.1-SNAPSHOT</version>
   	</dependency>
+  	<dependency>
+  		<groupId>com.hp.it.perf.monitor.hub</groupId>
+  		<artifactId>hub-client</artifactId>
+  		<version>0.0.1-SNAPSHOT</version>
+  		<optional>true</optional>
+  	</dependency>
   </dependencies>
 </project>

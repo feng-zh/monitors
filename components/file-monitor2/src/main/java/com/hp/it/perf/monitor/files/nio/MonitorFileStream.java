@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hp.it.perf.monitor.files.ContentLine;
+import com.hp.it.perf.monitor.files.ContentLineSourceObserver;
 import com.hp.it.perf.monitor.files.ContentLineStream;
 import com.hp.it.perf.monitor.files.FileContentChangeListener;
 import com.hp.it.perf.monitor.files.FileInstance;
@@ -35,6 +36,8 @@ class MonitorFileStream implements ContentLineStream,
 	private final static Object OffsetTracker = new Object();
 
 	private boolean monitorable;
+
+	private ContentLineSourceObserver sourceObserver;
 
 	private static final Logger log = LoggerFactory
 			.getLogger(MonitorFileStream.class);
@@ -162,6 +165,12 @@ class MonitorFileStream implements ContentLineStream,
 	private byte[] readLine() throws IOException {
 		if (stopRead) {
 			log.trace("no data for stop reading file {}", fileInstance);
+			if (sourceObserver != null) {
+				sourceObserver.sourceFileDeleted(this.fileInstance,
+						this.fileInstance);
+				// make sure only one event
+				sourceObserver = null;
+			}
 			return null;
 		} else {
 			log.trace("fetch one line from file {}", fileInstance);
@@ -245,6 +254,11 @@ class MonitorFileStream implements ContentLineStream,
 		log.debug("load read offset {} from file {}", offset, instance);
 		instance.putClientProperty(OffsetTracker, null);
 		return offset;
+	}
+
+	@Override
+	public void setSourceObserver(ContentLineSourceObserver sourceObserver) {
+		this.sourceObserver = sourceObserver;
 	}
 
 }

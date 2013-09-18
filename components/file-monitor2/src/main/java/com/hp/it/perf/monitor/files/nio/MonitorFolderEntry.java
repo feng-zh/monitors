@@ -174,6 +174,10 @@ class MonitorFolderEntry {
 					folder.onFileInstanceCreated(newFileInstance,
 							renamed ? new FileChangeOption(oldFileInstance)
 									: new FileChangeOption());
+					log.trace(
+							"try to dispatch content change event for new file {}",
+							newFileInstance);
+					folder.onContentChanged(newFileInstance);
 				}
 			}
 		}

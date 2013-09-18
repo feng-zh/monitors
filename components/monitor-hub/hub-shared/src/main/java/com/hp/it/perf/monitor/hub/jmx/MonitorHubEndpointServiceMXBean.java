@@ -1,8 +1,12 @@
 package com.hp.it.perf.monitor.hub.jmx;
 
-import com.hp.it.perf.monitor.hub.GatewayPayload;
-
 public interface MonitorHubEndpointServiceMXBean {
+
+	public String NOTIFICATION_MONITOR_EVENT = "MONITOR_EVENT";
+
+	public String NOTIFICATION_HUB_EVENT = "HUB_EVENT";
+	
+	public String NOTIFICATION_COMPRESSED_EVENT = "COMPRESSED_EVENT";
 
 	public long getDataCount();
 
@@ -10,6 +14,12 @@ public interface MonitorHubEndpointServiceMXBean {
 
 	public String getEndpointName();
 
-	public void publish(GatewayPayload... payloads);
+	public void setNotificationOpenTypeEnabled(boolean enable);
+
+	public boolean isNotificationOpenTypeEnabled();
+
+	public void setNotificationCompressEnabled(boolean enable);
+
+	public boolean isNotificationCompressEnabled();
 
 }

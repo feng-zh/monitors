@@ -24,6 +24,10 @@ public class MonitorHubService extends NotificationBroadcasterSupport implements
 
 	private List<MonitorHubEndpointService> endpointsService = new ArrayList<MonitorHubEndpointService>();
 
+	private boolean notificationCompressDefault;
+
+	private boolean notificationOpenTypeDefault;
+
 	public MonitorHubService(MonitorHub coreHub) {
 		this.coreHub = coreHub;
 	}
@@ -46,6 +50,10 @@ public class MonitorHubService extends NotificationBroadcasterSupport implements
 		for (MonitorEndpoint me : listEndpoints(null)) {
 			MonitorHubEndpointService endpointService = new MonitorHubEndpointService(
 					me);
+			endpointService
+					.setNotificationOpenTypeEnabled(notificationOpenTypeDefault);
+			endpointService
+					.setNotificationCompressEnabled(notificationCompressDefault);
 			ObjectName endpointName = HubJMX.createEndpointObjectName(hubName,
 					me);
 			mbeanServer.registerMBean(endpointService, endpointName);
@@ -94,6 +102,26 @@ public class MonitorHubService extends NotificationBroadcasterSupport implements
 	@Override
 	public String[] getDomains() {
 		return coreHub.getDomains();
+	}
+
+	@Override
+	public void setNotificationOpenTypeDefault(boolean enable) {
+		this.notificationOpenTypeDefault = enable;
+	}
+
+	@Override
+	public boolean isNotificationOpenTypeDefault() {
+		return notificationOpenTypeDefault;
+	}
+
+	@Override
+	public void setNotificationCompressDefault(boolean enable) {
+		this.notificationCompressDefault = enable;
+	}
+
+	@Override
+	public boolean isNotificationCompressDefault() {
+		return notificationCompressDefault;
 	}
 
 }

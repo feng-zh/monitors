@@ -4,9 +4,9 @@ import java.io.Serializable;
 
 public class MonitorHubContentData implements Serializable {
 
-	private static final long serialVersionUID = 6996526155736191309L;
+	private static final long serialVersionUID = -7340156872106166623L;
 
-	private Object content;
+	private byte[] content;
 
 	private long id;
 
@@ -14,11 +14,16 @@ public class MonitorHubContentData implements Serializable {
 
 	private String source;
 
-	public Object getContent() {
+	// used for internal JMX data exchange
+	// 0b0xxxxxx (raw event) >=0
+	// 0b1xxxxxx (compressed event)
+	private byte dataType;
+
+	public byte[] getContent() {
 		return content;
 	}
 
-	public void setContent(Object content) {
+	public void setContent(byte[] content) {
 		this.content = content;
 	}
 
@@ -44,6 +49,14 @@ public class MonitorHubContentData implements Serializable {
 
 	public void setSource(String source) {
 		this.source = source;
+	}
+
+	public byte getDataType() {
+		return dataType;
+	}
+
+	public void setDataType(byte dataType) {
+		this.dataType = dataType;
 	}
 
 }

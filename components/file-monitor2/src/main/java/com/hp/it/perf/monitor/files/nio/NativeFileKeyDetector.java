@@ -16,7 +16,7 @@ class NativeFileKeyDetector implements FileKeyDetector {
 
 	NativeFileKeyDetector(Path watchPath) {
 		this.watchPath = watchPath;
-		this.currentPathKeyResolver = new PathKeyResolver(watchPath);
+		this.currentPathKeyResolver = new PathKeyResolver();
 	}
 
 	@Override

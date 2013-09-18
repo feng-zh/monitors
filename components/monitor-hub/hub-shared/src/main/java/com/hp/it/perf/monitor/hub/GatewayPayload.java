@@ -8,7 +8,7 @@ public class GatewayPayload implements Serializable {
 
 	// private long time;
 
-	private byte[] content;
+	private Object content;
 
 	// private long contentId;
 
@@ -16,11 +16,11 @@ public class GatewayPayload implements Serializable {
 
 	private String contentSource;
 
-	public byte[] getContent() {
+	public Object getContent() {
 		return content;
 	}
 
-	public void setContent(byte[] content) {
+	public void setContent(Object content) {
 		this.content = content;
 	}
 

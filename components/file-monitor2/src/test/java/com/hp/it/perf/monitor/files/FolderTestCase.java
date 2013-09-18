@@ -3,13 +3,17 @@ package com.hp.it.perf.monitor.files;
 import static org.hamcrest.MatcherAssert.*;
 import static org.hamcrest.Matchers.*;
 
+import java.io.EOFException;
 import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -48,8 +52,7 @@ public class FolderTestCase {
 		File testFile2 = helper.copy(
 				new File("src/test/data/sample_file1.txt"), "sample_file2.txt");
 		FileSet folder = factory.getFileSet(testFile1.getParent());
-		ContentLineStream lineStream = ((ContentLineStreamProvider) folder)
-				.open(new FileOpenOptionBuilder().tailMode().build());
+		ContentLineStream lineStream = createLineStream(folder);
 		helper.registerClosable(lineStream);
 		String data = "newline";
 		helper.echo(data, testFile1);
@@ -70,8 +73,7 @@ public class FolderTestCase {
 		File testFile2 = helper.copy(
 				new File("src/test/data/sample_file1.txt"), "sample_file2.txt");
 		FileSet folder = factory.getFileSet(testFile1.getParent());
-		ContentLineStream lineStream = ((ContentLineStreamProvider) folder)
-				.open(new FileOpenOptionBuilder().tailMode().build());
+		ContentLineStream lineStream = createLineStream(folder);
 		helper.registerClosable(lineStream);
 		String data = "newline";
 		helper.echoSync(data, testFile1, 1, TimeUnit.SECONDS);
@@ -85,13 +87,18 @@ public class FolderTestCase {
 		lineStream.close();
 	}
 
+	protected ContentLineStream createLineStream(FileSet folder)
+			throws IOException {
+		return ((ContentLineStreamProvider) folder)
+				.open(new FileOpenOptionBuilder().tailMode().build());
+	}
+
 	@Test(timeout = 8000)
 	public void testFileModifyReadPoll() throws Exception {
 		File testFile1 = helper
 				.copy(new File("src/test/data/sample_file1.txt"));
 		FileSet folder = factory.getFileSet(testFile1.getParent());
-		ContentLineStream lineStream = ((ContentLineStreamProvider) folder)
-				.open(new FileOpenOptionBuilder().tailMode().build());
+		ContentLineStream lineStream = createLineStream(folder);
 		helper.registerClosable(lineStream);
 		{
 			String data = "newline";
@@ -136,8 +143,7 @@ public class FolderTestCase {
 		File testFile2 = helper.copy(
 				new File("src/test/data/sample_file1.txt"), "sample_file2.txt");
 		FileSet folder = factory.getFileSet(testFile1.getParent());
-		ContentLineStream lineStream = ((ContentLineStreamProvider) folder)
-				.open(new FileOpenOptionBuilder().tailMode().build());
+		ContentLineStream lineStream = createLineStream(folder);
 		helper.registerClosable(lineStream);
 		helper.echo("line1", testFile1);
 		helper.echo("line2", testFile1);
@@ -157,6 +163,31 @@ public class FolderTestCase {
 		assertThat(count, is(equalTo(1)));
 		count = lineStream.drainTo(list, 2);
 		assertThat(count, is(equalTo(0)));
+		lineStream.close();
+	}
+
+	@Test(timeout = 2000L)
+	public void testNoFileMonitor() throws Exception {
+		File testFile1 = helper
+				.copy(new File("src/test/data/sample_file1.txt"));
+		// TODO
+		helper.delete(testFile1);
+		FileSet folder = factory.getFileSet(testFile1.getParent());
+		ContentLineStream lineStream = createLineStream(folder);
+		helper.registerClosable(lineStream);
+		ContentLine line = lineStream.take();
+		assertThat(line, is(nullValue()));
+		try {
+			line = lineStream.poll(1, TimeUnit.SECONDS);
+			Assert.fail("expect EOF");
+		} catch (EOFException e) {
+			assertThat(e, is(notNullValue(EOFException.class)));
+		}
+		line = lineStream.poll();
+		assertThat(line, is(nullValue()));
+		List<ContentLine> list = new ArrayList<ContentLine>();
+		int len = lineStream.drainTo(list, 1);
+		assertThat(len, is(-1));
 		lineStream.close();
 	}
 
@@ -195,8 +226,7 @@ public class FolderTestCase {
 		File testFile1 = helper
 				.copy(new File("src/test/data/sample_file1.txt"));
 		FileSet folder = factory.getFileSet(testFile1.getParent());
-		ContentLineStream lineStream = ((ContentLineStreamProvider) folder)
-				.open(new FileOpenOptionBuilder().tailMode().build());
+		ContentLineStream lineStream = createLineStream(folder);
 		helper.registerClosable(lineStream);
 		String testFileName1 = testFile1.getPath();
 		String data = "newline";
@@ -223,8 +253,7 @@ public class FolderTestCase {
 		File testFile2 = helper.copy(
 				new File("src/test/data/sample_file1.txt"), "sample_file2.txt");
 		FileSet folder = factory.getFileSet(testFile1.getParent());
-		ContentLineStream lineStream = ((ContentLineStreamProvider) folder)
-				.open(new FileOpenOptionBuilder().tailMode().build());
+		ContentLineStream lineStream = createLineStream(folder);
 		helper.registerClosable(lineStream);
 		helper.echo("line1", testFile1);
 		ContentLine line = lineStream.take();
@@ -282,8 +311,7 @@ public class FolderTestCase {
 		File testFile2 = helper.copy(
 				new File("src/test/data/sample_file1.txt"), "sample_file2.txt");
 		FileSet folder = factory.getFileSet(testFile1.getParent());
-		ContentLineStream lineStream = ((ContentLineStreamProvider) folder)
-				.open(new FileOpenOptionBuilder().tailMode().build());
+		ContentLineStream lineStream = createLineStream(folder);
 		helper.registerClosable(lineStream);
 		helper.echo("line1", testFile1);
 		ContentLine line = lineStream.take();
@@ -334,12 +362,11 @@ public class FolderTestCase {
 		lineStream.close();
 	}
 
-	@Test(timeout = 5000)
+	@Test(timeout = 6000)
 	public void testDelete() throws Exception {
 		File testFile = helper.copy(new File("src/test/data/sample_file1.txt"));
 		FileSet folder = factory.getFileSet(testFile.getParent());
-		ContentLineStream lineStream = ((ContentLineStreamProvider) folder)
-				.open(new FileOpenOptionBuilder().tailMode().build());
+		ContentLineStream lineStream = createLineStream(folder);
 		helper.registerClosable(lineStream);
 		String testFileName = testFile.getPath();
 		helper.echo("line1", testFile);
@@ -366,8 +393,7 @@ public class FolderTestCase {
 		File testFile2 = helper.copy(
 				new File("src/test/data/sample_file1.txt"), "sample_file2.txt");
 		FileSet folder = factory.getFileSet(testFile1.getParent());
-		ContentLineStream lineStream = ((ContentLineStreamProvider) folder)
-				.open(new FileOpenOptionBuilder().tailMode().build());
+		ContentLineStream lineStream = createLineStream(folder);
 		helper.registerClosable(lineStream);
 		helper.echo("line1", testFile1);
 		ContentLine line = lineStream.take();
@@ -408,8 +434,7 @@ public class FolderTestCase {
 	public void testPartialLineRead() throws Exception {
 		File testFile = helper.copy(new File("src/test/data/sample_file1.txt"));
 		FileSet folder = factory.getFileSet(testFile.getParent());
-		ContentLineStream lineStream = ((ContentLineStreamProvider) folder)
-				.open(new FileOpenOptionBuilder().tailMode().build());
+		ContentLineStream lineStream = createLineStream(folder);
 		helper.registerClosable(lineStream);
 		String data = "newline";
 		helper.print(data, testFile);

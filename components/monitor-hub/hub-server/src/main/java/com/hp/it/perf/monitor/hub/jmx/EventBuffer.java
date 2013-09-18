@@ -1,4 +1,4 @@
-package com.hp.it.perf.monitor.files.jmx;
+package com.hp.it.perf.monitor.hub.jmx;
 
 import java.util.LinkedList;
 import java.util.Queue;
@@ -6,17 +6,15 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import com.hp.it.perf.monitor.files.ContentLine;
-
-class ContentLineBuffer implements Runnable {
+public class EventBuffer<T> implements Runnable {
 
 	private int size;
 
-	private Queue<ContentLine> queue = new LinkedList<ContentLine>();
+	private Queue<T> queue = new LinkedList<T>();
 
 	private long lastTime = System.nanoTime();
 
-	private BufferHandler handler;
+	private EventBufferHandler<T> handler;
 
 	private long bufTime;
 
@@ -24,13 +22,13 @@ class ContentLineBuffer implements Runnable {
 
 	private ScheduledFuture<?> scheduledFuture;
 
-	public static interface BufferHandler {
+	public static interface EventBufferHandler<T> {
 
-		public void handleBuffer(Queue<ContentLine> buffer);
+		public void handleBuffer(Queue<T> buffer);
 
 	}
 
-	public ContentLineBuffer(int size, int time, BufferHandler handler,
+	public EventBuffer(int size, int time, EventBufferHandler<T> handler,
 			ScheduledExecutorService scheduler) {
 		this.size = size;
 		this.bufTime = TimeUnit.MILLISECONDS.toNanos(time);
@@ -38,7 +36,7 @@ class ContentLineBuffer implements Runnable {
 		this.scheduler = scheduler;
 	}
 
-	public synchronized void add(ContentLine item) {
+	public synchronized void add(T item) {
 		long now = System.nanoTime();
 		if (queue.isEmpty()) {
 			lastTime = now;

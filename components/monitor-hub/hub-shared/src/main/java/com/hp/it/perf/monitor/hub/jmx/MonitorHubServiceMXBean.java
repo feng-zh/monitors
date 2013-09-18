@@ -8,4 +8,12 @@ public interface MonitorHubServiceMXBean {
 
 	public String[] getDomains();
 
+	public void setNotificationOpenTypeDefault(boolean enable);
+
+	public boolean isNotificationOpenTypeDefault();
+
+	public void setNotificationCompressDefault(boolean enable);
+
+	public boolean isNotificationCompressDefault();
+
 }

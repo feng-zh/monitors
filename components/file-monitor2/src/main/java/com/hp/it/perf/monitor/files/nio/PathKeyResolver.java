@@ -1,7 +1,6 @@
 package com.hp.it.perf.monitor.files.nio;
 
 import java.io.IOException;
-import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -39,28 +38,13 @@ class PathKeyResolver {
 
 	private int currentVersion = 0;
 
-	private Path basePath;
-
-	private boolean searchFolder;
-
 	public PathKeyResolver(PathKeyResolver base) {
 		pathKeyMapping.putAll(base.pathKeyMapping);
 		keyPathMapping.putAll(base.keyPathMapping);
 		currentVersion = base.currentVersion;
-		basePath = base.basePath;
-		searchFolder = base.searchFolder;
 	}
 
-	public PathKeyResolver(Path basePath) {
-		this.basePath = basePath;
-	}
-
-	public boolean isSearchFolder() {
-		return searchFolder;
-	}
-
-	public void setSearchFolder(boolean searchFolder) {
-		this.searchFolder = searchFolder;
+	public PathKeyResolver() {
 	}
 
 	public int updateVersion() {
@@ -143,46 +127,11 @@ class PathKeyResolver {
 		Versioned<Path> vPath = keyPathMapping.get(fileKey);
 		if (vPath != null && vPath.getVersion() >= version) {
 			return vPath.getData();
-		} else if (!searchFolder) {
+		} else {
 			// not found, update it to null
 			removeDeletedPathKey(fileKey);
 			return null;
 		}
-		DirectoryStream<Path> directoryStream;
-		try {
-			directoryStream = Files.newDirectoryStream(basePath);
-		} catch (IOException ignored) {
-			return null;
-		}
-		try {
-			for (Path path : directoryStream) {
-				Object nativeKey;
-				try {
-					BasicFileAttributes attr;
-					attr = Files
-							.readAttributes(path, BasicFileAttributes.class);
-					nativeKey = attr.fileKey();
-					if (nativeKey == null) {
-						nativeKey = path.toRealPath().toString();
-					}
-				} catch (IOException ignored) {
-					continue;
-				}
-				FileKey newFileKey = new FileKey(nativeKey);
-				updatePathKey(path, newFileKey);
-				if (isSameKey(newFileKey, fileKey)) {
-					return path;
-				}
-			}
-		} finally {
-			try {
-				directoryStream.close();
-			} catch (IOException ignored) {
-			}
-		}
-		// not found
-		updatePathKey(null, fileKey);
-		return null;
 	}
 
 	private void removeDeletedPathKey(FileKey fileKey) {

@@ -13,7 +13,7 @@ public interface MonitorHub {
 
 	// TODO support endpoint change listener
 
-	// send data?
-	public HubPublisher createPublisher(MonitorEndpoint endpoint, HubPublishOption option);
+	public HubPublisher createPublisher(MonitorEndpoint endpoint,
+			HubPublishOption option);
 
 }
