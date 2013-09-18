@@ -49,7 +49,7 @@ class MultiMonitorFileService implements Closeable {
 			realFolderPath = path.toRealPath();
 			store = storeMapCache.get(realFolderPath);
 			if (store == null) {
-				store = Files.getFileStore(path);
+				store = Files.getFileStore(path.toRealPath());
 				storeMapCache.put(realFolderPath, store);
 			}
 			storeMapCache.put(path, store);

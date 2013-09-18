@@ -82,7 +82,7 @@ public class CompositeInstanceContentLineStream implements ContentLineStream,
 		checkClosed();
 		ContentLine content = null;
 		FileInstance file = null;
-		while (content != null) {
+		while (content == null) {
 			if (file == null) {
 				file = lastUpdateFiles.poll();
 			}

@@ -66,7 +66,8 @@ public class MonitorFileFactory implements FileInstanceFactory {
 		File requestFolder = new File(path);
 		File canonicalFolder = requestFolder.getCanonicalFile();
 		MonitorFileFolder fileFolder = folders.get(canonicalFolder);
-		if (fileFolder == null && isInclude(canonicalFolder)) {
+		if (fileFolder == null && isInclude(canonicalFolder)
+				&& requestFolder.isDirectory()) {
 			fileFolder = new MonitorFileFolder(requestFolder, strategy,
 					statistics,
 					multiMonitorService.getMonitorService(requestFolder));

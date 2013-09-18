@@ -9,4 +9,6 @@ public interface FileSet extends FileInstanceChangeAware {
 
 	public Map<String, ? extends FileCluster> listClusters();
 
+	public String getPath();
+
 }

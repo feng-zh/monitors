@@ -1,10 +1,14 @@
 package com.hp.it.perf.monitor.hub;
 
-public class GatewayPayload {
+import java.io.Serializable;
+
+public class GatewayPayload implements Serializable {
+
+	private static final long serialVersionUID = -5688054799154644888L;
 
 	// private long time;
 
-	private Object content;
+	private byte[] content;
 
 	// private long contentId;
 
@@ -12,11 +16,11 @@ public class GatewayPayload {
 
 	private String contentSource;
 
-	public Object getContent() {
+	public byte[] getContent() {
 		return content;
 	}
 
-	public void setContent(Object content) {
+	public void setContent(byte[] content) {
 		this.content = content;
 	}
 

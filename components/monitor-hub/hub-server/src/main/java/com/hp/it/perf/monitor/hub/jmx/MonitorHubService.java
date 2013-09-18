@@ -3,12 +3,10 @@ package com.hp.it.perf.monitor.hub.jmx;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.management.InstanceAlreadyExistsException;
 import javax.management.InstanceNotFoundException;
 import javax.management.MBeanRegistration;
 import javax.management.MBeanRegistrationException;
 import javax.management.MBeanServer;
-import javax.management.NotCompliantMBeanException;
 import javax.management.NotificationBroadcasterSupport;
 import javax.management.ObjectName;
 
@@ -98,26 +96,4 @@ public class MonitorHubService extends NotificationBroadcasterSupport implements
 		return coreHub.getDomains();
 	}
 
-	@Override
-	public MonitorEndpoint createEndpoint(String domain, String name) {
-		MonitorEndpoint me = new MonitorEndpoint(domain, name);
-		MonitorHubEndpointService endpointService = new MonitorHubEndpointService(
-				me);
-		ObjectName endpointName = HubJMX.createEndpointObjectName(objectName,
-				me);
-		try {
-			mbeanServer.registerMBean(endpointService, endpointName);
-		} catch (InstanceAlreadyExistsException e) {
-			return endpointsService.get(me);
-		} catch (MBeanRegistrationException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (NotCompliantMBeanException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		endpointService.substribe(coreHub);
-		endpointsService.add(endpointService);
-		return me;
-	}
 }

@@ -137,7 +137,7 @@ public class SuperSetContentLineStream implements ContentLineStream {
 		checkClosed();
 		ContentLine content = null;
 		ContentLineStreamProvider file = null;
-		while (content != null) {
+		while (content == null) {
 			if (file == null) {
 				file = lastUpdateFiles.poll();
 			}
@@ -289,6 +289,7 @@ public class SuperSetContentLineStream implements ContentLineStream {
 					close(stream);
 				}
 			}
+			allInstances.clear();
 			onClosed();
 		}
 	}

@@ -1,6 +1,7 @@
 package com.hp.it.perf.monitor.files.nio;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.StandardWatchEventKinds;
@@ -137,9 +138,9 @@ class MonitorFileService implements Closeable, Runnable {
 				if (log.isTraceEnabled()) {
 					log.trace("poll {} watch events", events.size());
 					for (WatchEvent<?> event : events) {
-						log.trace("- Event {}({}) on {}/{}",
-								new Object[] { event.kind(), event.count(),
-										path, event.context() });
+						log.trace("- Event {}({}) on {}{}{}", new Object[] {
+								event.kind(), event.count(), path,
+								File.pathSeparator, event.context() });
 					}
 				}
 				// reset key to retrieve pending events

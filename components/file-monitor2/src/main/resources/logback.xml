@@ -7,8 +7,8 @@
 			<pattern>%d{HH:mm:ss.SSS} - %msg%n</pattern>
 		</encoder>
 	</appender>
-	<logger name="com.hp.it.perf.monitor.files" level="INFO"/>
-	<root level="INFO">
+	<logger name="com.hp.it.perf.monitor.files" level="TRACE"/>
+	<root level="TRACE">
 		<appender-ref ref="STDOUT" />
 	</root>
 </configuration>

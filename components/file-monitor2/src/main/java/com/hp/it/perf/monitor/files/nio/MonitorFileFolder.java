@@ -241,4 +241,9 @@ class MonitorFileFolder implements FileSet, ContentLineStreamProvider,
 		return fileInstance;
 	}
 
+	@Override
+	public String getPath() {
+		return folder.getPath();
+	}
+
 }
