@@ -1,8 +1,12 @@
 package com.hp.it.perf.monitor.hub.rest;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import javax.ws.rs.BadRequestException;
+import javax.ws.rs.BeanParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.Path;
@@ -10,16 +14,15 @@ import javax.ws.rs.PathParam;
 
 import com.hp.it.perf.monitor.hub.MonitorEndpoint;
 import com.hp.it.perf.monitor.hub.MonitorHub;
+import com.hp.it.perf.monitor.hub.support.DefaultHubSubscribeOption;
 
 @Path("/hub")
 public class HubResource {
 
 	final private MonitorHub coreHub;
-	private int queueSize;
 
-	HubResource(MonitorHub coreHub, int queueSize) {
+	HubResource(MonitorHub coreHub) {
 		this.coreHub = coreHub;
-		this.queueSize = queueSize;
 	}
 
 	MonitorHub getHub() {
@@ -67,4 +70,29 @@ public class HubResource {
 				+ ", name: " + endpointName + ")");
 	}
 
+	@Path("/broadcast")
+	public HubSseBroadcasterResource broadcast(
+			@BeanParam HubSubscribeParam subscribeParam) {
+		HubSseBroadcasterResource broadcasterResource = new HubSseBroadcasterResource(
+				coreHub);
+		DefaultHubSubscribeOption option;
+		if (subscribeParam.getEndpoints().isEmpty()) {
+			// all listened
+			option = null;
+		} else {
+			Set<MonitorEndpoint> endpoints = new HashSet<MonitorEndpoint>();
+			for (String endpointSpec : subscribeParam.getEndpoints()) {
+				try {
+					endpoints.add(MonitorEndpoint.valueOf(endpointSpec));
+				} catch (IllegalArgumentException e) {
+					throw new BadRequestException("invalid endpoint spec: "
+							+ endpointSpec);
+				}
+			}
+			option = new DefaultHubSubscribeOption(
+					endpoints.toArray(new MonitorEndpoint[endpoints.size()]));
+		}
+		coreHub.subscribe(broadcasterResource, option);
+		return broadcasterResource;
+	}
 }

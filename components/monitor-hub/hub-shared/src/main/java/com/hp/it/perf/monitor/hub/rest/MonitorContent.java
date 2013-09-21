@@ -18,6 +18,8 @@ public class MonitorContent {
 
 	private String contentSource;
 
+	private String endpoint;
+
 	public long getTime() {
 		return time;
 	}
@@ -56,6 +58,14 @@ public class MonitorContent {
 
 	public void setContentSource(String contentSource) {
 		this.contentSource = contentSource;
+	}
+
+	public String getEndpoint() {
+		return endpoint;
+	}
+
+	public void setEndpoint(String endpoint) {
+		this.endpoint = endpoint;
 	}
 
 }

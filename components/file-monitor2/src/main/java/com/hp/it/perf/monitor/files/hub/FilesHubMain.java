@@ -15,6 +15,14 @@ import javax.management.remote.JMXConnectorServerFactory;
 import javax.management.remote.JMXServiceURL;
 import javax.management.remote.rmi.RMIConnectorServer;
 import javax.naming.Context;
+import javax.ws.rs.ext.RuntimeDelegate;
+
+import org.glassfish.grizzly.http.server.HttpHandler;
+import org.glassfish.grizzly.http.server.HttpServer;
+import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpContainer;
+import org.glassfish.jersey.media.sse.SseFeature;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import com.hp.it.perf.monitor.files.ContentLine;
 import com.hp.it.perf.monitor.files.ContentLineSourceObserver;
@@ -36,6 +44,7 @@ import com.hp.it.perf.monitor.hub.internal.InternalMonitorHub;
 import com.hp.it.perf.monitor.hub.jmx.HubJMX;
 import com.hp.it.perf.monitor.hub.jmx.MonitorHubJmxFactory;
 import com.hp.it.perf.monitor.hub.jmx.MonitorHubService;
+import com.hp.it.perf.monitor.hub.rest.HubApplication;
 import com.hp.it.perf.monitor.hub.support.DefaultHubSubscribeOption;
 
 public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
@@ -45,6 +54,12 @@ public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 	private SuperSetContentLineStream superSetStream;
 	private HubPublisher publisher;
 	private JMXConnectorServer connectorServer;
+	private InternalMonitorHub coreHub;
+
+	static {
+		SLF4JBridgeHandler.removeHandlersForRootLogger();
+		SLF4JBridgeHandler.install();
+	}
 
 	public FilesHubMain(String domain, String name) {
 		this.endpoint = new MonitorEndpoint(domain, name);
@@ -55,7 +70,7 @@ public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 	}
 
 	public void startPublish() throws JMException {
-		InternalMonitorHub coreHub = new InternalMonitorHub();
+		coreHub = new InternalMonitorHub();
 		publisher = coreHub.createPublisher(endpoint, null);
 		setupJmxHub(coreHub);
 		testRead(connectorServer.getAddress(), endpoint);
@@ -135,6 +150,7 @@ public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 				return;
 			}
 			hubMain.startPublish();
+			hubMain.testRest();
 			FileInstance lastFile = null;
 			String fileName = null;
 			int lastLineCount = 0;
@@ -269,4 +285,15 @@ public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 		publisher.update(status);
 	}
 
+	public void testRest() throws IOException {
+		final HttpServer server = HttpServer.createSimpleServer("/", 17008);
+		ResourceConfig resourceConfig = new ResourceConfig();
+		resourceConfig.registerClasses(SseFeature.class);
+		resourceConfig.register(new HubApplication(coreHub));
+		HttpHandler handler = RuntimeDelegate.getInstance().createEndpoint(
+				resourceConfig, GrizzlyHttpContainer.class);
+		server.getServerConfiguration().addHttpHandler(handler, "/myhub");
+		server.start();
+		System.out.println("SERVER started at " + server);
+	}
 }

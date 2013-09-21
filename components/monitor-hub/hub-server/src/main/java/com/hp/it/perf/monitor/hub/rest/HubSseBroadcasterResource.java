@@ -1,49 +1,92 @@
 package com.hp.it.perf.monitor.hub.rest;
 
-import java.io.IOException;
-
-import javax.inject.Singleton;
-import javax.ws.rs.BeanParam;
 import javax.ws.rs.GET;
-import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 
 import org.glassfish.jersey.media.sse.EventOutput;
 import org.glassfish.jersey.media.sse.OutboundEvent;
-import org.glassfish.jersey.media.sse.SseBroadcaster;
 import org.glassfish.jersey.media.sse.SseFeature;
 
+import com.hp.it.perf.monitor.hub.HubEvent;
+import com.hp.it.perf.monitor.hub.HubSubscriber;
+import com.hp.it.perf.monitor.hub.MonitorEndpoint;
+import com.hp.it.perf.monitor.hub.MonitorEvent;
 import com.hp.it.perf.monitor.hub.MonitorHub;
 
-@Singleton
-@Path("hub/broadcast")
-public class HubSseBroadcasterResource {
+public class HubSseBroadcasterResource implements HubSubscriber {
 
-	private SseBroadcaster broadcaster = new SseBroadcaster();
+	private MonitorHub coreHub;
+	private volatile EventOutput eventOutput;
 
-	private MonitorHub monitorHub = null;
-
-	static class SubscribeEventOutput extends EventOutput {
-
-		public SubscribeEventOutput(HubSubscribeParam subscribeParam) {
-		}
-
-		@Override
-		public void write(OutboundEvent chunk) throws IOException {
-			// TODO Auto-generated method stub
-			super.write(chunk);
-		}
-
+	HubSseBroadcasterResource(MonitorHub coreHub) {
+		this.coreHub = coreHub;
+		System.out.println("CREATE broadcaster resource");
 	}
 
 	@GET
 	@Produces(SseFeature.SERVER_SENT_EVENTS)
-	public EventOutput subscribe(@BeanParam HubSubscribeParam subscribeParam) {
-		// monitorHub.subscribe(subscriber, option);
-		// subscriber
-		final EventOutput eventOutput = new SubscribeEventOutput(subscribeParam);
-		this.broadcaster.add(eventOutput);
+	public EventOutput subscribe() {
+		eventOutput = new EventOutput();
 		return eventOutput;
+	}
+
+	@Override
+	public void onData(MonitorEvent event) {
+		if (eventOutput != null) {
+			MonitorContent content = new MonitorContent();
+			content.setContentId(event.getContentId());
+			content.setContentSource(event.getContentSource());
+			content.setContentType(event.getContentType());
+			content.setTime(event.getTime());
+			content.setContent(event.getContent());
+			content.setEndpoint(((MonitorEndpoint) event.getSource())
+					.toString());
+			OutboundEvent outboundEvent = new OutboundEvent.Builder()
+					.name("data").data(MonitorContent.class, content).build();
+			sendEvent(outboundEvent);
+		}
+	}
+
+	@Override
+	public void onHubEvent(HubEvent event) {
+		if (eventOutput != null) {
+			HubContent content = new HubContent();
+			content.setStatus(event.getStatus().ordinal());
+			content.setEndpoint(event.getEndpoint() == null ? "" : event
+					.getEndpoint().toString());
+			content.setContent(event.getData());
+			OutboundEvent outboundEvent = new OutboundEvent.Builder()
+					.name("hub").data(HubContent.class, content).build();
+			sendEvent(outboundEvent);
+		}
+	}
+
+	private void sendEvent(OutboundEvent event) {
+		EventOutput output = eventOutput;
+		if (output != null) {
+			if (!output.isClosed()) {
+				try {
+					output.write(event);
+				} catch (Exception e) {
+					fireOnException(e);
+				}
+			}
+			if (output.isClosed()) {
+				if (eventOutput != null) {
+					eventOutput = null;
+					fireOnClose();
+				}
+			}
+		}
+	}
+
+	private void fireOnException(Exception e) {
+		// TODO
+		e.printStackTrace();
+	}
+
+	private void fireOnClose() {
+		coreHub.unsubscribe(this);
 	}
 
 }

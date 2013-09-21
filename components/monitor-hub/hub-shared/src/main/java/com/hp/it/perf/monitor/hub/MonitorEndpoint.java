@@ -64,7 +64,8 @@ public class MonitorEndpoint implements Serializable {
 		return domain + ":" + name;
 	}
 
-	public static MonitorEndpoint valueOf(String value) {
+	public static MonitorEndpoint valueOf(String value)
+			throws IllegalArgumentException {
 		int index = value.indexOf(':');
 		if (index != -1) {
 			return new MonitorEndpoint(value.substring(0, index),

@@ -2,6 +2,7 @@ package com.hp.it.perf.monitor.hub.internal;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -17,7 +18,7 @@ class InternalHubProcessor {
 
 	private List<InternalHubPublisher> publishers = new ArrayList<InternalHubPublisher>();
 
-	private List<InternalHubSubscriber> subscribers = new ArrayList<InternalHubSubscriber>();
+	private List<InternalHubSubscriber> subscribers = new CopyOnWriteArrayList<InternalHubSubscriber>();
 
 	private Executor executor;
 
