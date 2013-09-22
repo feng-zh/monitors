@@ -79,7 +79,7 @@ public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 	private void setupJmxHub(InternalMonitorHub coreHub) throws JMException {
 		MonitorHubService jmxHub = new MonitorHubService(coreHub);
 		jmxHub.setNotificationCompressDefault(true);
-		jmxHub.setNotificationOpenTypeDefault(false);
+		jmxHub.setNotificationOpenTypeDefault(true);
 		ManagementFactory.getPlatformMBeanServer().registerMBean(jmxHub,
 				HubJMX.getHubObjectName());
 	}

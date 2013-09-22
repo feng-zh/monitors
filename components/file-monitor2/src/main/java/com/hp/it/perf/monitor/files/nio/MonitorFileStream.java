@@ -39,6 +39,9 @@ class MonitorFileStream implements ContentLineStream,
 
 	private ContentLineSourceObserver sourceObserver;
 
+	// default 600 seconds
+	private int idleTimeout = Integer.getInteger("monitor.reader.idleTimeout", 600);
+
 	private static final Logger log = LoggerFactory
 			.getLogger(MonitorFileStream.class);
 
@@ -50,6 +53,7 @@ class MonitorFileStream implements ContentLineStream,
 		fileInstance.getStatistics().ioReaderCount().increment();
 		reader.setStatisticis(fileInstance.getStatistics());
 		reader.open(initOffset, lazyOpen);
+		reader.setKeepAlive(idleTimeout);
 		fileInstance.addFileInstanceChangeListener(this);
 		if (monitorable) {
 			fileInstance.addFileContentChangeListener(this);
