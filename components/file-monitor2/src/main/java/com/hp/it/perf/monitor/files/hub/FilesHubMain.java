@@ -106,8 +106,6 @@ public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 		connectorServer = JMXConnectorServerFactory.newJMXConnectorServer(
 				new JMXServiceURL(serviceURL), environment,
 				ManagementFactory.getPlatformMBeanServer());
-		connectorServer.start();
-		log.info("==> Target JMX Service URL is {}", serviceURL);
 	}
 
 	public void addMonitorFolder(String folder) throws FileNotFoundException,
@@ -153,6 +151,7 @@ public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 				return;
 			}
 			hubMain.startPublish();
+			hubMain.startDone();
 			// hubMain.testRest();
 			FileInstance lastFile = null;
 			String fileName = null;
@@ -191,6 +190,12 @@ public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 		} finally {
 			hubMain.close();
 		}
+	}
+
+	public void startDone() throws IOException {
+		connectorServer.start();
+		log.info("==> Target JMX Service URL is {}",
+				connectorServer.getAddress());
 	}
 
 	private void testReconnect() {
