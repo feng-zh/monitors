@@ -2,6 +2,7 @@ package com.hp.it.perf.monitor.hub.rest;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
 
 import org.glassfish.jersey.media.sse.EventOutput;
 import org.glassfish.jersey.media.sse.OutboundEvent;
@@ -42,7 +43,8 @@ public class HubSseBroadcasterResource implements HubSubscriber {
 			content.setEndpoint(((MonitorEndpoint) event.getSource())
 					.toString());
 			OutboundEvent outboundEvent = new OutboundEvent.Builder()
-					.name("data").data(MonitorContent.class, content).build();
+					.mediaType(MediaType.APPLICATION_JSON_TYPE).name("data")
+					.data(MonitorContent.class, content).build();
 			sendEvent(outboundEvent);
 		}
 	}
@@ -56,7 +58,8 @@ public class HubSseBroadcasterResource implements HubSubscriber {
 					.getEndpoint().toString());
 			content.setContent(event.getData());
 			OutboundEvent outboundEvent = new OutboundEvent.Builder()
-					.name("hub").data(HubContent.class, content).build();
+					.mediaType(MediaType.APPLICATION_JSON_TYPE).name("hub")
+					.data(HubContent.class, content).build();
 			sendEvent(outboundEvent);
 		}
 	}
@@ -81,11 +84,11 @@ public class HubSseBroadcasterResource implements HubSubscriber {
 	}
 
 	private void fireOnException(Exception e) {
-		// TODO
-		e.printStackTrace();
+		// e.printStackTrace();
 	}
 
 	private void fireOnClose() {
+		System.out.println("unsubscribe");
 		coreHub.unsubscribe(this);
 	}
 

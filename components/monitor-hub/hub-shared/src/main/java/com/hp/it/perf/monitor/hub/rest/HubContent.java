@@ -1,20 +1,15 @@
 package com.hp.it.perf.monitor.hub.rest;
 
-public class HubContent {
+import javax.xml.bind.annotation.XmlRootElement;
 
-	private int status;
+@XmlRootElement(name = "HubContent")
+public class HubContent {
 
 	private String endpoint;
 
 	private Object content;
 
-	public int getStatus() {
-		return status;
-	}
-
-	public void setStatus(int status) {
-		this.status = status;
-	}
+	private int status;
 
 	public String getEndpoint() {
 		return endpoint;
@@ -30,6 +25,14 @@ public class HubContent {
 
 	public void setContent(Object content) {
 		this.content = content;
+	}
+
+	public int getStatus() {
+		return status;
+	}
+
+	public void setStatus(int status) {
+		this.status = status;
 	}
 
 }

@@ -75,21 +75,6 @@
   		<version>${monitor.hub.version}</version>
   		<optional>true</optional>
   	</dependency>
-  	<dependency>
-  		<groupId>org.glassfish.jersey.media</groupId>
-  		<artifactId>jersey-media-sse</artifactId>
-  		<version>2.0</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>org.glassfish.jersey.containers</groupId>
-  		<artifactId>jersey-container-grizzly2-http</artifactId>
-  		<version>2.0</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>org.slf4j</groupId>
-  		<artifactId>jul-to-slf4j</artifactId>
-  		<version>1.7.2</version>
-  	</dependency>
   </dependencies>
   <dependencyManagement>
   	<dependencies>

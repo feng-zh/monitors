@@ -1,11 +1,8 @@
 package com.hp.it.perf.monitor.hub.rest;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.XmlRootElement;
 
-@XmlAccessorType(XmlAccessType.PROPERTY)
-@XmlType(name = "MonitorContent")
+@XmlRootElement(name = "MonitorContent")
 public class MonitorContent {
 
 	private long time;
