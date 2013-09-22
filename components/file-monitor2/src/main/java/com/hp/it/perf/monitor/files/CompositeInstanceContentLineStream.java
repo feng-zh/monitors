@@ -53,7 +53,7 @@ public class CompositeInstanceContentLineStream extends
 		log.debug("add file instance into streams: {}", instance);
 		fileUpdateNotifier.addMonitorInstance(instance);
 		if (openOption.openOnTail()) {
-			fileUpdateNotifier.preCheckQueue(instanceChange, instance);
+			// fileUpdateNotifier.preCheckQueue(instanceChange, instance);
 			getContentStream(instance);
 		}
 		fileUpdateNotifier.addFileContentChangeAware(instance);
