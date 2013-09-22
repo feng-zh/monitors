@@ -115,6 +115,7 @@ class MonitorFolderEntry {
 					newFileInstance = this.folder
 							.getFileInstance(((Path) e.event.context())
 									.toString());
+					keyMapping.put(e.currentFileKey, newFileInstance);
 				}
 				e.currentInstance = newFileInstance;
 			} else if (kind == StandardWatchEventKinds.ENTRY_DELETE
