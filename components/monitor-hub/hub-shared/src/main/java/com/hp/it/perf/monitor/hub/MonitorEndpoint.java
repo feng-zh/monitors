@@ -1,5 +1,6 @@
 package com.hp.it.perf.monitor.hub;
 
+import java.beans.ConstructorProperties;
 import java.io.Serializable;
 
 // domain: hpsc, sbs
@@ -12,6 +13,7 @@ public class MonitorEndpoint implements Serializable {
 
 	final private String name;
 
+	@ConstructorProperties({ "domain", "name" })
 	public MonitorEndpoint(String domain, String name) {
 		if (domain.indexOf(':') != -1) {
 			throw new IllegalArgumentException("invalid domain");

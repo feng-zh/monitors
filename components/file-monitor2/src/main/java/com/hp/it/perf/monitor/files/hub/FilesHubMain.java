@@ -22,6 +22,8 @@ import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpContainer;
 import org.glassfish.jersey.media.sse.SseFeature;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import com.hp.it.perf.monitor.files.ContentLine;
@@ -55,6 +57,8 @@ public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 	private HubPublisher publisher;
 	private JMXConnectorServer connectorServer;
 	private InternalMonitorHub coreHub;
+
+	private static Logger log = LoggerFactory.getLogger(FilesHubMain.class);
 
 	static {
 		SLF4JBridgeHandler.removeHandlersForRootLogger();
@@ -103,7 +107,7 @@ public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 				new JMXServiceURL(serviceURL), environment,
 				ManagementFactory.getPlatformMBeanServer());
 		connectorServer.start();
-		System.out.println("==> Target JMX Service URL is " + serviceURL);
+		log.info("==> Target JMX Service URL is {}", serviceURL);
 	}
 
 	public void addMonitorFolder(String folder) throws FileNotFoundException,
@@ -139,14 +143,13 @@ public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 					hubMain.addMonitorFolder(fileName);
 					success = true;
 				} catch (FileNotFoundException e) {
-					System.err.println("File not found: " + fileName);
+					log.error("File not found: " + fileName);
 				} catch (IOException e) {
-					System.err.println("Add folder error: " + e);
-					e.printStackTrace();
+					log.error("Add folder error", e);
 				}
 			}
 			if (!success) {
-				System.err.println("No folder added, exit!");
+				log.error("No folder added, exit!");
 				return;
 			}
 			hubMain.startPublish();
@@ -159,9 +162,8 @@ public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 				try {
 					line = hubMain.readLine();
 				} catch (IOException e) {
-					System.err.println("ERROR: Read Line get " + e);
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+					log.error("ERROR: Read Line get " + e);
+					log.debug("caused by:", e);
 				} catch (InterruptedException e) {
 					Thread.currentThread().interrupt();
 					break;
@@ -173,12 +175,8 @@ public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 				if (!fileInstance.equals(lastFile)) {
 					if (lastFile != null) {
 						// end last file
-						// TODO full file name
-						System.out.print(lastFile.getFileSet().getPath());
-						System.out.print("/");
-						System.out.print(lastFile.getName());
-						System.out.print(": ");
-						System.out.println(lastLineCount);
+						log.info("{}/{}: {}", lastFile.getFileSet().getPath(),
+								lastFile.getName(), lastLineCount);
 					}
 					lastLineCount = 0;
 					lastFile = fileInstance;
@@ -259,13 +257,13 @@ public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 
 	@Override
 	public void onData(MonitorEvent event) {
-		System.out.println(event.getContentSource() + ": "
+		log.info(event.getContentSource() + ": "
 				+ new String((byte[]) event.getContent()));
 	}
 
 	@Override
 	public void onHubEvent(HubEvent event) {
-		System.out.println(event.getHub() + " - " + event.getStatus() + " - "
+		log.info(event.getHub() + " - " + event.getStatus() + " - "
 				+ event.getData());
 	}
 
@@ -275,6 +273,7 @@ public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 		status.setStatus(0); // created
 		status.setContext(file.getFileSet().getPath() + "/" + file.getName());
 		publisher.update(status);
+		log.info("Creating: {}", status.getContext());
 	}
 
 	@Override
@@ -283,6 +282,7 @@ public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 		status.setStatus(1); // deleted
 		status.setContext(file.getFileSet().getPath() + "/" + file.getName());
 		publisher.update(status);
+		log.info("Deleted: {}", status.getContext());
 	}
 
 	public void testRest() throws IOException {
@@ -294,6 +294,6 @@ public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 				resourceConfig, GrizzlyHttpContainer.class);
 		server.getServerConfiguration().addHttpHandler(handler, "/myhub");
 		server.start();
-		System.out.println("SERVER started at " + server);
+		log.info("SERVER started at " + server);
 	}
 }
