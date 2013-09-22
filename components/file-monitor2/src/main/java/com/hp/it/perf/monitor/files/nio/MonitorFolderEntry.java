@@ -95,6 +95,27 @@ class MonitorFolderEntry {
 			Kind<?> kind = e.event.kind();
 			if (kind == StandardWatchEventKinds.ENTRY_MODIFY) {
 				// modify
+				if (newFileInstance == null) {
+					// ::log warning for investigation::
+					log.warn(
+							"GET NULL FILE INSTANCE IN MODIFY EVENT on index {}",
+							i);
+					for (WatchEvent<?> we : events) {
+						log.warn("ORIGINAL Event - {}({})[{}]", new Object[] {
+								we.kind(), we.context(), we.count() });
+					}
+					for (WatchEventKeys we : newEvents) {
+						log.warn(
+								"NEW Event - {}({})[({}){} -> ({}){}]",
+								new Object[] { we.event.kind(),
+										we.event.context(), we.previousPath,
+										we.previousFileKey, we.currentPath,
+										we.currentFileKey });
+					}
+					newFileInstance = this.folder
+							.getFileInstance(((Path) e.event.context())
+									.toString());
+				}
 				e.currentInstance = newFileInstance;
 			} else if (kind == StandardWatchEventKinds.ENTRY_DELETE
 					|| kind == ENTRY_RENAME_FROM) {

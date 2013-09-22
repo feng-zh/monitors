@@ -34,7 +34,7 @@ class MonitorFileInstance implements FileInstance, ContentLineStreamProvider {
 
 	private final Map<Object, Object> clientProperites = new ConcurrentHashMap<Object, Object>();
 
-	private MonitorFileMetadata metadata;
+	private final MonitorFileMetadata metadata;
 
 	public MonitorFileInstance(String fileName, String clusterName,
 			MonitorFileFolder fileSet) {
