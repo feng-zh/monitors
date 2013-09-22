@@ -6,7 +6,10 @@
     <version>1</version>
   </parent>
   <artifactId>file-monitor2</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>1.0.0-SNAPSHOT</version>
+  <properties>
+  	<monitor.hub.version>1.0.0-SNAPSHOT</monitor.hub.version>
+  </properties>
   <build>
   	<plugins>
 		<plugin>
@@ -16,6 +19,23 @@
 				<source>1.6</source>
 				<target>1.7</target>
 			</configuration>
+		</plugin>
+		<plugin>
+			<artifactId>maven-assembly-plugin</artifactId>
+			<configuration>
+				<descriptors>
+					<descriptor>src/main/assembly/bin.xml</descriptor>
+				</descriptors>
+			</configuration>
+			<executions>
+				<execution>
+					<id>make-assembly</id>
+					<phase>package</phase>
+					<goals>
+						<goal>single</goal>
+					</goals>
+				</execution>
+			</executions>
 		</plugin>
 	</plugins>
   </build>
@@ -47,12 +67,12 @@
   	<dependency>
   		<groupId>com.hp.it.perf.monitor.hub</groupId>
   		<artifactId>hub-server</artifactId>
-  		<version>0.0.1-SNAPSHOT</version>
+  		<version>${monitor.hub.version}</version>
   	</dependency>
   	<dependency>
   		<groupId>com.hp.it.perf.monitor.hub</groupId>
   		<artifactId>hub-client</artifactId>
-  		<version>0.0.1-SNAPSHOT</version>
+  		<version>${monitor.hub.version}</version>
   		<optional>true</optional>
   	</dependency>
   	<dependency>
@@ -71,4 +91,8 @@
   		<version>1.7.2</version>
   	</dependency>
   </dependencies>
+  <dependencyManagement>
+  	<dependencies>
+  	</dependencies>
+  </dependencyManagement>
 </project>

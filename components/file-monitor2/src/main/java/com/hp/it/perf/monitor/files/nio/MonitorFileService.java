@@ -34,6 +34,9 @@ class MonitorFileService implements Closeable, Runnable {
 
 	private static Logger log = LoggerFactory
 			.getLogger(MonitorFileService.class);
+	
+	static private boolean slowSensitivity = Boolean
+			.getBoolean("monitor.nio.slow");
 
 	private ExecutorService eventProcess;
 
@@ -77,7 +80,8 @@ class MonitorFileService implements Closeable, Runnable {
 				StandardWatchEventKinds.ENTRY_CREATE,
 				StandardWatchEventKinds.ENTRY_MODIFY,
 				StandardWatchEventKinds.ENTRY_DELETE },
-				SensitivityWatchEventModifier.HIGH);
+				slowSensitivity ? SensitivityWatchEventModifier.MEDIUM
+						: SensitivityWatchEventModifier.HIGH);
 		log.debug("register watch on path {}", basePath);
 		FileKeyDetector fileKeyDetector = fileKeyDetectorFactory
 				.create(basePath);

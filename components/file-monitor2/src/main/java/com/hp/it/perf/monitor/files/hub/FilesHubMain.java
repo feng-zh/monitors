@@ -73,7 +73,7 @@ public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 		coreHub = new InternalMonitorHub();
 		publisher = coreHub.createPublisher(endpoint, null);
 		setupJmxHub(coreHub);
-		testRead(connectorServer.getAddress(), endpoint);
+		// testRead(connectorServer.getAddress(), endpoint);
 	}
 
 	private void setupJmxHub(InternalMonitorHub coreHub) throws JMException {
@@ -150,7 +150,7 @@ public class FilesHubMain implements HubSubscriber, ContentLineSourceObserver {
 				return;
 			}
 			hubMain.startPublish();
-			hubMain.testRest();
+			// hubMain.testRest();
 			FileInstance lastFile = null;
 			String fileName = null;
 			int lastLineCount = 0;
