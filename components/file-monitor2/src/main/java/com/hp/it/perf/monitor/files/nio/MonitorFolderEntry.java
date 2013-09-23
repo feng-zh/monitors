@@ -112,9 +112,12 @@ class MonitorFolderEntry {
 										we.previousFileKey, we.currentPath,
 										we.currentFileKey });
 					}
-					newFileInstance = this.folder
-							.getFileInstance(((Path) e.event.context())
-									.toString());
+					log.warn("OLD FILE INSTANCE: {}", oldFileInstance);
+					keyMapping.remove(e.previousFileKey);
+					newFileInstance = oldFileInstance;
+					// newFileInstance = this.folder
+					// .getFileInstance(((Path) e.event.context())
+					// .toString());
 					keyMapping.put(e.currentFileKey, newFileInstance);
 				}
 				e.currentInstance = newFileInstance;
