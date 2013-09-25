@@ -23,6 +23,7 @@ import com.hp.it.perf.monitor.files.ContentLine;
 import com.hp.it.perf.monitor.files.ContentLineSourceObserver;
 import com.hp.it.perf.monitor.files.FileInstance;
 import com.hp.it.perf.monitor.files.FileInstanceFactory;
+import com.hp.it.perf.monitor.files.FileMetadata;
 import com.hp.it.perf.monitor.files.FileOpenOptionBuilder;
 import com.hp.it.perf.monitor.files.FileSet;
 import com.hp.it.perf.monitor.files.SuperSetContentLineStream;
@@ -112,6 +113,8 @@ public class FilesHubMain implements ContentLineSourceObserver {
 				args = new String[] { args[0], args[1], "." };
 			}
 			hubMain.setupJMXConnectorServer();
+			hubMain.startPublish();
+			hubMain.startDone();
 			boolean success = false;
 			for (int i = 2; i < args.length; i++) {
 				// TODO file name filter
@@ -129,10 +132,8 @@ public class FilesHubMain implements ContentLineSourceObserver {
 				log.error("No folder added, exit!");
 				return;
 			}
-			hubMain.startPublish();
-			hubMain.startDone();
 			FileInstance lastFile = null;
-			String fileName = null;
+			String filePath = null;
 			int lastLineCount = 0;
 			ContentLine line = null;
 			while (true) {
@@ -157,11 +158,16 @@ public class FilesHubMain implements ContentLineSourceObserver {
 					}
 					lastLineCount = 0;
 					lastFile = fileInstance;
-					fileName = fileInstance.getFileSet().getPath() + "/"
-							+ lastFile.getName();
+					filePath = (String) fileInstance
+							.getClientProperty("FILE_PATH");
+					if (filePath == null) {
+						FileMetadata metadata = fileInstance.getMetadata(false);
+						filePath = metadata.getRealPath();
+						fileInstance.putClientProperty("FILE_PATH", filePath);
+					}
 				}
 				lastLineCount++;
-				hubMain.publish(line, fileName);
+				hubMain.publish(line, filePath);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();

@@ -41,9 +41,15 @@ class MonitorFileInstance implements FileInstance, ContentLineStreamProvider {
 		this.file = new File(fileSet.getFolder(), fileName);
 		this.clusterName = clusterName;
 		this.fileSet = fileSet;
+		String realPath;
+		try {
+			realPath = file.getCanonicalPath();
+		} catch (IOException e) {
+			realPath = file.getAbsolutePath();
+		}
 		try {
 			this.metadata = new MonitorFileMetadata(fileName, file.getPath(),
-					file.toURI().toURL());
+					realPath, file.toURI().toURL());
 		} catch (MalformedURLException e) {
 			throw new IllegalArgumentException(e);
 		}

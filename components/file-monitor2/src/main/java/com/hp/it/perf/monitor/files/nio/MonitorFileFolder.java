@@ -225,7 +225,7 @@ class MonitorFileFolder implements FileSet, ContentLineStreamProvider,
 		return ((MonitorFileInstance) fileInstance).open(option);
 	}
 
-	FileInstance getOrCreateFileInstance(File file) {
+	FileInstance getOrCreateFileInstance(File file) throws IOException {
 		FileInstance fileInstance = getFileInstance(file.getName());
 		if (fileInstance == null) {
 			fileInstance = makeFileInstance(file);

@@ -8,6 +8,8 @@ public interface FileMetadata {
 
 	public String getPath();
 
+	public String getRealPath();
+
 	public boolean isPackaged();
 
 	public long getLastModifiedDate();

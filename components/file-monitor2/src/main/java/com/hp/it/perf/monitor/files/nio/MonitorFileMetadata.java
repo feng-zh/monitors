@@ -9,12 +9,15 @@ class MonitorFileMetadata implements FileMetadata {
 	private final URL url;
 	private final String name;
 	private final String path;
+	private final String realPath;
 	private long lastModifiedDate = -1;
 	private long length = 0;
 
-	public MonitorFileMetadata(String name, String path, URL url) {
+	public MonitorFileMetadata(String name, String path, String realPath,
+			URL url) {
 		this.name = name;
 		this.path = path;
+		this.realPath = realPath;
 		this.url = url;
 	}
 
@@ -22,6 +25,7 @@ class MonitorFileMetadata implements FileMetadata {
 		this.name = metadata.name;
 		this.url = metadata.url;
 		this.path = metadata.path;
+		this.realPath = metadata.realPath;
 		this.lastModifiedDate = metadata.lastModifiedDate;
 		this.length = metadata.length;
 	}
@@ -58,6 +62,11 @@ class MonitorFileMetadata implements FileMetadata {
 	@Override
 	public URL toURL() {
 		return url;
+	}
+	
+	@Override
+	public String getRealPath() {
+		return realPath;
 	}
 
 	@Override
