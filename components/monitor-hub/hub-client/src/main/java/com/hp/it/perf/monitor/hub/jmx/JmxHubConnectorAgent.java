@@ -143,6 +143,7 @@ class JmxHubConnectorAgent implements NotificationListener, Runnable,
 			connector = JMXConnectorFactory.newJMXConnector(jmxServiceURL,
 					enviornment);
 			connector.addConnectionNotificationListener(this, null, connector);
+			jmxConnector = connector;
 		}
 		connector.connect();
 		return connector;
@@ -217,7 +218,6 @@ class JmxHubConnectorAgent implements NotificationListener, Runnable,
 
 	protected void onNotificationOpened(JMXConnectionNotification notification,
 			JMXConnector connector) {
-		this.jmxConnector = connector;
 		// System.out.println("open");
 		stopScheduler();
 		recoverNotificationListeners(connector);
