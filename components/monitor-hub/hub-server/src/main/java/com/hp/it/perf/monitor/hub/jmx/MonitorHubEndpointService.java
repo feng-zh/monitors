@@ -82,14 +82,16 @@ public class MonitorHubEndpointService extends NotificationBroadcasterSupport
 	}
 
 	@Override
-	public void onData(MonitorEvent event) {
-		Notification notification = new Notification(
-				NOTIFICATION_MONITOR_EVENT, this, 0);
-		notification.setTimeStamp(event.getTime());
-		MonitorHubContentData data = new MonitorHubContentData();
-		HubJMX.setMonitorEventContent(data, event);
-		notification.setUserData(data);
-		sendNotification(notification);
+	public void onData(MonitorEvent... events) {
+		for (MonitorEvent event : events) {
+			Notification notification = new Notification(
+					NOTIFICATION_MONITOR_EVENT, this, 0);
+			notification.setTimeStamp(event.getTime());
+			MonitorHubContentData data = new MonitorHubContentData();
+			HubJMX.setMonitorEventContent(data, event);
+			notification.setUserData(data);
+			sendNotification(notification);
+		}
 	}
 
 	@Override

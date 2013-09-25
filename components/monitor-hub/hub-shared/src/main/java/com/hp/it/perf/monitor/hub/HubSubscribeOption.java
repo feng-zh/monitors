@@ -11,4 +11,7 @@ public interface HubSubscribeOption extends Serializable {
 
 	public MonitorFilter getMonitorFilter();
 
+	// <=0 is no restriction
+	public int getBatchSize();
+
 }

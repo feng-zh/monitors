@@ -49,7 +49,7 @@ public class InternalMonitorHub implements MonitorHub {
 	@Override
 	public void subscribe(HubSubscriber subscriber, HubSubscribeOption option) {
 		InternalHubSubscriber internalSubscriber = new InternalHubSubscriber(
-				subscriber, option != null ? option.getMonitorFilter() : null);
+				subscriber, option);
 		if (option != null) {
 			MonitorEndpoint[] preferedEndpoints = option.getPreferedEndpoints();
 			if (preferedEndpoints.length != 0) {

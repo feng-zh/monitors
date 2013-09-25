@@ -36,9 +36,7 @@ class InternalHubProcessor {
 
 		@Override
 		public void run() {
-			for (MonitorEvent event : events) {
-				subscriber.onData(event);
-			}
+			subscriber.onData(events.toArray(new MonitorEvent[events.size()]));
 		}
 
 	}

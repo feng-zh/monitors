@@ -1,5 +1,6 @@
 package com.hp.it.perf.monitor.hub.jmx;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -18,6 +19,7 @@ import com.hp.it.perf.monitor.hub.HubSubscriber;
 import com.hp.it.perf.monitor.hub.MonitorEndpoint;
 import com.hp.it.perf.monitor.hub.MonitorEvent;
 import com.hp.it.perf.monitor.hub.MonitorHub;
+import com.hp.it.perf.monitor.hub.support.DefaultHubSubscribeOption;
 
 class JmxHubSubscriber implements NotificationListener {
 
@@ -57,6 +59,7 @@ class JmxHubSubscriber implements NotificationListener {
 			} else {
 				list = Collections.singletonList((Notification) notification);
 			}
+			List<MonitorEvent> events = new ArrayList<MonitorEvent>();
 			for (Notification newNotification : list) {
 				MonitorHubContentData data = (MonitorHubContentData) newNotification
 						.getUserData();
@@ -65,14 +68,10 @@ class JmxHubSubscriber implements NotificationListener {
 					MonitorEvent event = new MonitorEvent(me);
 					event.setTime(newNotification.getTimeStamp());
 					HubJMX.getMonitorEventContent(event, data);
-					try {
-						subscriber.onData(event);
-					} catch (Exception e) {
-						// TODO
-						e.printStackTrace();
-					}
+					events.add(event);
 				} else if (MonitorHubEndpointServiceMXBean.NOTIFICATION_HUB_EVENT
 						.equals(newNotification.getType())) {
+					sendEvents(events);
 					HubEvent event = HubJMX
 							.getHubEventContent(monitorHub, data);
 					try {
@@ -82,14 +81,22 @@ class JmxHubSubscriber implements NotificationListener {
 						e.printStackTrace();
 					}
 				} else {
+					sendEvents(events);
 					// TODO
 					System.err.println("unknown notification "
 							+ newNotification);
 				}
 			}
+			sendEvents(events);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+
+	private void sendEvents(List<MonitorEvent> events) {
+		DefaultHubSubscribeOption.batchOnData(subscriber, option,
+				events.toArray(new MonitorEvent[events.size()]));
+		events.clear();
 	}
 
 	void onHubEvent(HubEvent event) {

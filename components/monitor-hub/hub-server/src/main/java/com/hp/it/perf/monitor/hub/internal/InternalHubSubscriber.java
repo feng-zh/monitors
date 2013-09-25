@@ -4,10 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.hp.it.perf.monitor.hub.HubEvent;
+import com.hp.it.perf.monitor.hub.HubSubscribeOption;
 import com.hp.it.perf.monitor.hub.HubSubscriber;
 import com.hp.it.perf.monitor.hub.MonitorEndpoint;
 import com.hp.it.perf.monitor.hub.MonitorEvent;
 import com.hp.it.perf.monitor.hub.MonitorFilter;
+import com.hp.it.perf.monitor.hub.support.DefaultHubSubscribeOption;
 
 class InternalHubSubscriber implements HubSubscriber {
 
@@ -18,18 +20,19 @@ class InternalHubSubscriber implements HubSubscriber {
 
 	private final HubSubscriber subscriber;
 
-	private final MonitorFilter filter;
+	private final HubSubscribeOption option;
 
-	public InternalHubSubscriber(HubSubscriber subscriber, MonitorFilter filter) {
+	public InternalHubSubscriber(HubSubscriber subscriber,
+			HubSubscribeOption option) {
 		this.subscriber = subscriber;
-		this.filter = filter;
+		this.option = option;
 	}
 
 	@Override
-	public void onData(MonitorEvent event) {
+	public void onData(MonitorEvent... events) {
 		if (!running)
 			return;
-		subscriber.onData(event);
+		DefaultHubSubscribeOption.batchOnData(subscriber, option, events);
 	}
 
 	@Override
@@ -67,9 +70,10 @@ class InternalHubSubscriber implements HubSubscriber {
 		if (!running) {
 			return null;
 		}
-		if (filter == null) {
+		if (option == null || option.getMonitorFilter() == null) {
 			return events;
 		}
+		MonitorFilter filter = option.getMonitorFilter();
 		List<MonitorEvent> eventList = new ArrayList<MonitorEvent>(
 				events.size());
 		for (MonitorEvent event : events) {

@@ -32,20 +32,23 @@ public class HubSseBroadcasterResource implements HubSubscriber {
 	}
 
 	@Override
-	public void onData(MonitorEvent event) {
-		if (eventOutput != null) {
-			MonitorContent content = new MonitorContent();
-			content.setContentId(event.getContentId());
-			content.setContentSource(event.getContentSource());
-			content.setContentType(event.getContentType());
-			content.setTime(event.getTime());
-			content.setContent(event.getContent());
-			content.setEndpoint(((MonitorEndpoint) event.getSource())
-					.toString());
-			OutboundEvent outboundEvent = new OutboundEvent.Builder()
-					.mediaType(MediaType.APPLICATION_JSON_TYPE).name("data")
-					.data(MonitorContent.class, content).build();
-			sendEvent(outboundEvent);
+	public void onData(MonitorEvent... events) {
+		for (MonitorEvent event : events) {
+			if (eventOutput != null) {
+				MonitorContent content = new MonitorContent();
+				content.setContentId(event.getContentId());
+				content.setContentSource(event.getContentSource());
+				content.setContentType(event.getContentType());
+				content.setTime(event.getTime());
+				content.setContent(event.getContent());
+				content.setEndpoint(((MonitorEndpoint) event.getSource())
+						.toString());
+				OutboundEvent outboundEvent = new OutboundEvent.Builder()
+						.mediaType(MediaType.APPLICATION_JSON_TYPE)
+						.name("data").data(MonitorContent.class, content)
+						.build();
+				sendEvent(outboundEvent);
+			}
 		}
 	}
 
