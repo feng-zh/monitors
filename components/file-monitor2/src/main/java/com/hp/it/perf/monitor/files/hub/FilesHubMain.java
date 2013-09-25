@@ -184,6 +184,7 @@ public class FilesHubMain implements ContentLineSourceObserver {
 
 	public void publish(ContentLine line, String source) {
 		GatewayPayload payload = new GatewayPayload();
+		payload.setContentId(line.getPosition());
 		payload.setContent(line.getLine());
 		payload.setContentSource(source);
 		// TODO how to use this content type in hub

@@ -2,9 +2,19 @@ package com.hp.it.perf.monitor.files;
 
 public class ContentLine {
 
+	private long position = -1; // unknown
+
 	private byte[] line;
 
 	private transient FileInstance fileInstance;
+
+	public long getPosition() {
+		return position;
+	}
+
+	public void setPosition(long position) {
+		this.position = position;
+	}
 
 	public byte[] getLine() {
 		return line;

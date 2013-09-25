@@ -10,11 +10,19 @@ public class GatewayPayload implements Serializable {
 
 	private Object content;
 
-	// private long contentId;
+	private long contentId;
 
 	private int contentType;
 
 	private String contentSource;
+
+	public long getContentId() {
+		return contentId;
+	}
+
+	public void setContentId(long contentId) {
+		this.contentId = contentId;
+	}
 
 	public Object getContent() {
 		return content;

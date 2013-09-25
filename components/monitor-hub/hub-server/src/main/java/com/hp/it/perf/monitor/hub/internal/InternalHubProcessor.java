@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicLong;
 
 import com.hp.it.perf.monitor.hub.GatewayPayload;
 import com.hp.it.perf.monitor.hub.GatewayStatus;
@@ -21,8 +20,6 @@ class InternalHubProcessor {
 	private List<InternalHubSubscriber> subscribers = new CopyOnWriteArrayList<InternalHubSubscriber>();
 
 	private Executor executor;
-
-	private AtomicLong seq = new AtomicLong();
 
 	private InternalMonitorHub monitorHub;
 
@@ -96,7 +93,7 @@ class InternalHubProcessor {
 			event.setContentSource(payload.getContentSource());
 			event.setContentType(payload.getContentType());
 			event.setTime(System.currentTimeMillis());
-			event.setContentId(seq.incrementAndGet());
+			event.setContentId(payload.getContentId());
 			masterEvents.add(event);
 		}
 

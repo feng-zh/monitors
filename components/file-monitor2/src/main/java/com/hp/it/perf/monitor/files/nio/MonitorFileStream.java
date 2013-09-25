@@ -40,7 +40,8 @@ class MonitorFileStream implements ContentLineStream,
 	private ContentLineSourceObserver sourceObserver;
 
 	// default 600 seconds
-	private int idleTimeout = Integer.getInteger("monitor.reader.idleTimeout", 600);
+	private int idleTimeout = Integer.getInteger("monitor.reader.idleTimeout",
+			600);
 
 	private static final Logger log = LoggerFactory
 			.getLogger(MonitorFileStream.class);
@@ -62,24 +63,37 @@ class MonitorFileStream implements ContentLineStream,
 
 	@Override
 	public ContentLine poll() throws IOException {
-		checkClosed();
-		byte[] line = readLine();
-		if (line == null) {
+		if (closed) {
+			throw new IOException("stream closed");
+		}
+		if (stopRead) {
+			log.trace("no data for stop reading file {}", fileInstance);
+			if (sourceObserver != null) {
+				sourceObserver.sourceFileDeleted(this.fileInstance,
+						this.fileInstance);
+				// make sure only one event
+				sourceObserver = null;
+			}
 			return null;
 		} else {
-			ContentLine content = new ContentLine();
-			content.setFileInstance(fileInstance);
-			content.setLine(line);
-			return content;
+			log.trace("fetch one line from file {}", fileInstance);
+			byte[] line = reader.readLine();
+			if (line == null) {
+				return null;
+			}
+			ContentLine contentLine = new ContentLine();
+			contentLine.setPosition(reader.position() - line.length);
+			contentLine.setLine(line);
+			contentLine.setFileInstance(fileInstance);
+			return contentLine;
 		}
 	}
 
 	@Override
 	public ContentLine take() throws IOException, InterruptedException {
 		while (true) {
-			checkClosed();
-			byte[] line = readLine();
-			if (line == null) {
+			ContentLine content = poll();
+			if (content == null) {
 				if (monitorable && !stopRead) {
 					lock.lock();
 					log.trace("wait for file updated from {}", fileInstance);
@@ -92,10 +106,8 @@ class MonitorFileStream implements ContentLineStream,
 					return null;
 				}
 			} else {
-				log.trace("one line for updated file {}", fileInstance);
-				ContentLine content = new ContentLine();
-				content.setFileInstance(fileInstance);
-				content.setLine(line);
+				log.trace("one line for updated file {}@{}", fileInstance,
+						content.getPosition());
 				return content;
 			}
 		}
@@ -106,11 +118,10 @@ class MonitorFileStream implements ContentLineStream,
 			InterruptedException, EOFException {
 		long nanosTimeout = unit.toNanos(timeout);
 		while (nanosTimeout > 0) {
-			checkClosed();
 			long beforeNanos = System.nanoTime();
-			byte[] line = readLine();
+			ContentLine content = poll();
 			nanosTimeout -= System.nanoTime() - beforeNanos;
-			if (line == null) {
+			if (content == null) {
 				if (monitorable && !stopRead) {
 					lock.lock();
 					try {
@@ -123,9 +134,6 @@ class MonitorFileStream implements ContentLineStream,
 							+ fileInstance.getName());
 				}
 			} else {
-				ContentLine content = new ContentLine();
-				content.setFileInstance(fileInstance);
-				content.setLine(line);
 				return content;
 			}
 		}
@@ -136,27 +144,23 @@ class MonitorFileStream implements ContentLineStream,
 	@Override
 	public int drainTo(Collection<? super ContentLine> list, int maxSize)
 			throws IOException {
-		checkClosed();
 		int totalLength = 0;
 		while (maxSize > 0) {
-			byte[] line = readLine();
-			if (line == null) {
+			ContentLine content = poll();
+			if (content == null) {
 				if (monitorable || totalLength > 0) {
 					break;
 				} else {
 					return -1;
 				}
 			} else {
-				ContentLine content = new ContentLine();
-				content.setFileInstance(fileInstance);
-				content.setLine(line);
 				boolean addSuccess = false;
 				try {
 					list.add(content);
 					addSuccess = true;
 				} finally {
 					if (!addSuccess) {
-						reader.pushBackLine(line);
+						reader.pushBackLine(content.getLine());
 					}
 				}
 				maxSize--;
@@ -164,28 +168,6 @@ class MonitorFileStream implements ContentLineStream,
 			}
 		}
 		return totalLength;
-	}
-
-	private byte[] readLine() throws IOException {
-		if (stopRead) {
-			log.trace("no data for stop reading file {}", fileInstance);
-			if (sourceObserver != null) {
-				sourceObserver.sourceFileDeleted(this.fileInstance,
-						this.fileInstance);
-				// make sure only one event
-				sourceObserver = null;
-			}
-			return null;
-		} else {
-			log.trace("fetch one line from file {}", fileInstance);
-			return reader.readLine();
-		}
-	}
-
-	private void checkClosed() throws IOException {
-		if (closed) {
-			throw new IOException("stream closed");
-		}
 	}
 
 	@Override
