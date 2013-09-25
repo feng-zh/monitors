@@ -16,8 +16,10 @@ import com.hp.it.perf.monitor.hub.HubPublishOption;
 import com.hp.it.perf.monitor.hub.HubPublisher;
 import com.hp.it.perf.monitor.hub.HubSubscribeOption;
 import com.hp.it.perf.monitor.hub.HubSubscriber;
+import com.hp.it.perf.monitor.hub.HubSubscriberHandler;
 import com.hp.it.perf.monitor.hub.MonitorEndpoint;
 import com.hp.it.perf.monitor.hub.MonitorHub;
+import com.hp.it.perf.monitor.hub.support.DefaultHubSubscriberHandler;
 
 public class InternalMonitorHub implements MonitorHub {
 
@@ -47,7 +49,8 @@ public class InternalMonitorHub implements MonitorHub {
 	}
 
 	@Override
-	public void subscribe(HubSubscriber subscriber, HubSubscribeOption option) {
+	public HubSubscriberHandler subscribe(HubSubscriber subscriber,
+			HubSubscribeOption option) {
 		InternalHubSubscriber internalSubscriber = new InternalHubSubscriber(
 				subscriber, option);
 		if (option != null) {
@@ -79,6 +82,7 @@ public class InternalMonitorHub implements MonitorHub {
 		HubEvent hubEvent = new HubEvent(this, HubStatus.Connected, null,
 				"start subscribe");
 		internalSubscriber.startSubscribe(hubEvent);
+		return new DefaultHubSubscriberHandler(this, subscriber, option);
 	}
 
 	@Override

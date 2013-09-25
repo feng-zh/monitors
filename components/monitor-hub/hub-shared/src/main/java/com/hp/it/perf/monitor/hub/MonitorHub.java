@@ -7,7 +7,8 @@ public interface MonitorHub {
 
 	public String[] getDomains();
 
-	public void subscribe(HubSubscriber subscriber, HubSubscribeOption option);
+	public HubSubscriberHandler subscribe(HubSubscriber subscriber,
+			HubSubscribeOption option);
 
 	public void unsubscribe(HubSubscriber subscriber);
 

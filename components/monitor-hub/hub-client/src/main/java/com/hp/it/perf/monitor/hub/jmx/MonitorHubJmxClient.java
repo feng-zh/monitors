@@ -18,8 +18,10 @@ import com.hp.it.perf.monitor.hub.HubPublishOption;
 import com.hp.it.perf.monitor.hub.HubPublisher;
 import com.hp.it.perf.monitor.hub.HubSubscribeOption;
 import com.hp.it.perf.monitor.hub.HubSubscriber;
+import com.hp.it.perf.monitor.hub.HubSubscriberHandler;
 import com.hp.it.perf.monitor.hub.MonitorEndpoint;
 import com.hp.it.perf.monitor.hub.MonitorHub;
+import com.hp.it.perf.monitor.hub.support.DefaultHubSubscriberHandler;
 
 class MonitorHubJmxClient implements MonitorHub, NotificationListener {
 
@@ -45,7 +47,7 @@ class MonitorHubJmxClient implements MonitorHub, NotificationListener {
 	}
 
 	@Override
-	public void subscribe(final HubSubscriber subscriber,
+	public HubSubscriberHandler subscribe(final HubSubscriber subscriber,
 			HubSubscribeOption option) {
 		if (!subscribers.containsKey(subscriber)) {
 			MonitorEndpoint[] endpoints = option.getPreferedEndpoints();
@@ -63,7 +65,7 @@ class MonitorHubJmxClient implements MonitorHub, NotificationListener {
 				// nothing to subscribe
 				// TODO dynamic added
 				// TODO unsubstribe
-				return;
+				return new DefaultHubSubscriberHandler(this, subscriber, option);
 			}
 			JmxHubSubscriber jmxSubscriber = new JmxHubSubscriber(this,
 					subscriber, option);
@@ -77,6 +79,7 @@ class MonitorHubJmxClient implements MonitorHub, NotificationListener {
 			this.subscribers.put(subscriber, jmxSubscriber);
 			jmxSubscriber.startSubscribe();
 		}
+		return new DefaultHubSubscriberHandler(this, subscriber, option);
 	}
 
 	@Override
