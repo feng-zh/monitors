@@ -258,10 +258,12 @@ class JmxHubConnectorAgent implements NotificationListener, Runnable,
 			case 2:
 				notificationRecorder
 						.removeNotificationListener((NotificationListener) args[1]);
+				break;
 			case 4:
 				notificationRecorder.removeNotificationListener(
 						(NotificationListener) args[1],
 						(NotificationFilter) args[2], args[3]);
+				break;
 			}
 			if (!notificationRecorder.hasListeneres()) {
 				notificationListenerRecorders.remove(args[0]);
