@@ -6,9 +6,9 @@
     <version>1</version>
   </parent>
   <artifactId>file-monitor</artifactId>
-  <version>1.1.0</version>
+  <version>1.1.1</version>
   <properties>
-  	<monitor.hub.version>1.0.0</monitor.hub.version>
+  	<monitor.hub.version>1.0.1</monitor.hub.version>
   </properties>
   <build>
   	<plugins>

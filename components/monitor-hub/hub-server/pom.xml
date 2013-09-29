@@ -5,7 +5,7 @@
 		<groupId>com.hp.it.perf.monitor.hub</groupId>
 		<artifactId>monitor-hub</artifactId>
 		<relativePath>..</relativePath>
-		<version>1.0.0</version>
+		<version>1.0.1</version>
 	</parent>
 	<artifactId>hub-server</artifactId>
 	<dependencies>
