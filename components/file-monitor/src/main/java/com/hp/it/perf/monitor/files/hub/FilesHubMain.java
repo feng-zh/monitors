@@ -158,13 +158,7 @@ public class FilesHubMain implements ContentLineSourceObserver {
 					}
 					lastLineCount = 0;
 					lastFile = fileInstance;
-					filePath = (String) fileInstance
-							.getClientProperty("FILE_PATH");
-					if (filePath == null) {
-						FileMetadata metadata = fileInstance.getMetadata(false);
-						filePath = metadata.getRealPath();
-						fileInstance.putClientProperty("FILE_PATH", filePath);
-					}
+					filePath = getFilePath(fileInstance);
 				}
 				lastLineCount++;
 				hubMain.publish(line, filePath);
@@ -174,6 +168,18 @@ public class FilesHubMain implements ContentLineSourceObserver {
 		} finally {
 			hubMain.close();
 		}
+	}
+
+	protected static String getFilePath(FileInstance fileInstance) {
+		String filePath;
+		filePath = (String) fileInstance
+				.getClientProperty("FILE_PATH");
+		if (filePath == null) {
+			FileMetadata metadata = fileInstance.getMetadata(false);
+			filePath = metadata.getRealPath();
+			fileInstance.putClientProperty("FILE_PATH", filePath);
+		}
+		return filePath;
 	}
 
 	public void startDone() throws IOException {
@@ -224,7 +230,7 @@ public class FilesHubMain implements ContentLineSourceObserver {
 	public void sourceFileCreated(FileInstance file, Object provider) {
 		GatewayStatus status = new GatewayStatus();
 		status.setStatus(0); // created
-		status.setContext(file.getFileSet().getPath() + "/" + file.getName());
+		status.setContext(getFilePath(file));
 		publisher.update(status);
 		log.info("Creating: {}", status.getContext());
 	}
@@ -233,7 +239,7 @@ public class FilesHubMain implements ContentLineSourceObserver {
 	public void sourceFileDeleted(FileInstance file, Object provider) {
 		GatewayStatus status = new GatewayStatus();
 		status.setStatus(1); // deleted
-		status.setContext(file.getFileSet().getPath() + "/" + file.getName());
+		status.setContext(getFilePath(file));
 		publisher.update(status);
 		log.info("Deleted: {}", status.getContext());
 	}
