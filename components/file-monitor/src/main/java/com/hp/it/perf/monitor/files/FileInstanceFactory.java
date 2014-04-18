@@ -14,6 +14,8 @@ public interface FileInstanceFactory extends Closeable {
 
 	public void setFileClusterStrategy(FileClusterStrategy strategy);
 
+	public void setGlobalFilenameFilter(FilenameFilter nameFilter);
+
 	public FileStatistics getStatistics();
 
 	public void close() throws IOException;

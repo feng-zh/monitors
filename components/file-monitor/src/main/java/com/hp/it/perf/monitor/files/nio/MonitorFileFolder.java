@@ -28,6 +28,7 @@ import com.hp.it.perf.monitor.files.FileInstanceChangeListener;
 import com.hp.it.perf.monitor.files.FileInstanceChangeListener.FileChangeOption;
 import com.hp.it.perf.monitor.files.FileOpenOption;
 import com.hp.it.perf.monitor.files.FileSet;
+import com.hp.it.perf.monitor.files.FilenameFilter;
 
 class MonitorFileFolder implements FileSet, ContentLineStreamProvider,
 		ContentLineStreamProviderDelegator {
@@ -49,6 +50,8 @@ class MonitorFileFolder implements FileSet, ContentLineStreamProvider,
 	private final DefaultFileStatistics statistics;
 
 	private MonitorFolderEntry folderWatchEntry;
+
+	private FilenameFilter nameFilter;
 
 	private static final Logger log = LoggerFactory
 			.getLogger(MonitorFileFolder.class);
@@ -74,11 +77,15 @@ class MonitorFileFolder implements FileSet, ContentLineStreamProvider,
 	void init() throws IOException {
 		// make sure list file first
 		for (File file : folder.listFiles()) {
-			if (file.isFile()) {
+			if (file.isFile() && isIncluded(file)) {
 				addInstance(makeFileInstance(file));
 			}
 		}
 		this.folderWatchEntry = this.monitorService.registerWatch(this);
+	}
+
+	boolean isIncluded(File file) {
+		return nameFilter == null || nameFilter.accept(file.getName());
 	}
 
 	MonitorFileInstance makeFileInstance(File file) {
@@ -236,6 +243,10 @@ class MonitorFileFolder implements FileSet, ContentLineStreamProvider,
 	@Override
 	public String getPath() {
 		return folder.getPath();
+	}
+
+	public void setFilenameFilter(FilenameFilter nameFilter) {
+		this.nameFilter = nameFilter;
 	}
 
 }

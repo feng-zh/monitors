@@ -8,6 +8,7 @@ import java.net.InetAddress;
 import java.rmi.registry.LocateRegistry;
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import javax.management.JMException;
 import javax.management.remote.JMXConnectorServer;
@@ -26,6 +27,7 @@ import com.hp.it.perf.monitor.files.FileInstanceFactory;
 import com.hp.it.perf.monitor.files.FileMetadata;
 import com.hp.it.perf.monitor.files.FileOpenOptionBuilder;
 import com.hp.it.perf.monitor.files.FileSet;
+import com.hp.it.perf.monitor.files.FilenameFilter;
 import com.hp.it.perf.monitor.files.SuperSetContentLineStream;
 import com.hp.it.perf.monitor.files.nio.MonitorFileFactory;
 import com.hp.it.perf.monitor.hub.GatewayPayload;
@@ -47,9 +49,20 @@ public class FilesHubMain implements ContentLineSourceObserver {
 
 	private static Logger log = LoggerFactory.getLogger(FilesHubMain.class);
 
-	public FilesHubMain(String domain, String name) {
+	public FilesHubMain(String domain, String name, String includePattern) {
 		this.endpoint = new MonitorEndpoint(domain, name);
 		this.fileFactory = new MonitorFileFactory();
+		if (includePattern != null) {
+			final Pattern pattern = Pattern.compile(includePattern);
+			log.info("Use include pattern: {}", pattern.pattern());
+			this.fileFactory.setGlobalFilenameFilter(new FilenameFilter() {
+
+				@Override
+				public boolean accept(String name) {
+					return pattern.matcher(name).matches();
+				}
+			});
+		}
 		this.superSetStream = new SuperSetContentLineStream(
 				new FileOpenOptionBuilder().lazyMode().tailMode().build());
 		this.superSetStream.setSourceObserver(this);
@@ -107,7 +120,8 @@ public class FilesHubMain implements ContentLineSourceObserver {
 					.println("ERROR: Need 'domain', and 'name' as first two arguements, like \"'hpsc' 'production'\".");
 			return;
 		}
-		FilesHubMain hubMain = new FilesHubMain(args[0], args[1]);
+		FilesHubMain hubMain = new FilesHubMain(args[0], args[1],
+				System.getProperty("monitor.file.include"));
 		try {
 			if (args.length == 2) {
 				args = new String[] { args[0], args[1], "." };
@@ -117,7 +131,6 @@ public class FilesHubMain implements ContentLineSourceObserver {
 			hubMain.startDone();
 			boolean success = false;
 			for (int i = 2; i < args.length; i++) {
-				// TODO file name filter
 				String fileName = args[i];
 				try {
 					hubMain.addMonitorFolder(fileName);
@@ -172,8 +185,7 @@ public class FilesHubMain implements ContentLineSourceObserver {
 
 	protected static String getFilePath(FileInstance fileInstance) {
 		String filePath;
-		filePath = (String) fileInstance
-				.getClientProperty("FILE_PATH");
+		filePath = (String) fileInstance.getClientProperty("FILE_PATH");
 		if (filePath == null) {
 			FileMetadata metadata = fileInstance.getMetadata(false);
 			filePath = metadata.getRealPath();

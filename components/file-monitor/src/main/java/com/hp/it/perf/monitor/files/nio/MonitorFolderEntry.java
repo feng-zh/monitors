@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchEvent.Kind;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,7 +80,9 @@ class MonitorFolderEntry {
 		keyMapping.put(fileKey, file);
 	}
 
-	public synchronized void processEvent(List<WatchEvent<?>> events) {
+	public synchronized void processEvent(List<WatchEvent<?>> watchEvents) {
+		// filter events by file name
+		List<WatchEvent<?>> events = filterEventsByName(watchEvents);
 		// filter events
 		List<WatchEventKeys> newEvents = fileKeyDetector
 				.detectWatchEvents(events);
@@ -100,7 +103,7 @@ class MonitorFolderEntry {
 					log.warn(
 							"GET NULL FILE INSTANCE IN MODIFY EVENT on index {}",
 							i);
-					for (WatchEvent<?> we : events) {
+					for (WatchEvent<?> we : watchEvents) {
 						log.warn("ORIGINAL Event - {}({})[{}]", new Object[] {
 								we.kind(), we.context(), we.count() });
 					}
@@ -206,6 +209,22 @@ class MonitorFolderEntry {
 				}
 			}
 		}
+	}
+
+	private List<WatchEvent<?>> filterEventsByName(List<WatchEvent<?>> events) {
+		List<WatchEvent<?>> newEvents = new ArrayList<WatchEvent<?>>(
+				events.size());
+		for (int i = 0, n = events.size(); i < n; i++) {
+			WatchEvent<?> event = events.get(i);
+			if (!(event.context() instanceof Path)) {
+				continue;
+			}
+			Path path = (Path) event.context();
+			if (folder.isIncluded(path.toFile())) {
+				newEvents.add(event);
+			}
+		}
+		return newEvents;
 	}
 
 	@Override

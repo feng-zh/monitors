@@ -15,6 +15,7 @@ import com.hp.it.perf.monitor.files.FileInstance;
 import com.hp.it.perf.monitor.files.FileInstanceFactory;
 import com.hp.it.perf.monitor.files.FileSet;
 import com.hp.it.perf.monitor.files.FileStatistics;
+import com.hp.it.perf.monitor.files.FilenameFilter;
 
 public class MonitorFileFactory implements FileInstanceFactory {
 
@@ -44,6 +45,8 @@ public class MonitorFileFactory implements FileInstanceFactory {
 
 	private boolean forcePollMode;
 
+	private FilenameFilter nameFilter;
+
 	@Override
 	public FileInstance getFileInstance(String path) throws IOException,
 			FileNotFoundException {
@@ -71,6 +74,7 @@ public class MonitorFileFactory implements FileInstanceFactory {
 			fileFolder = new MonitorFileFolder(requestFolder, strategy,
 					statistics,
 					multiMonitorService.getMonitorService(requestFolder));
+			fileFolder.setFilenameFilter(nameFilter);
 			fileFolder.init();
 			statistics.fileSetCount().increment();
 			return fileFolder;
@@ -101,6 +105,11 @@ public class MonitorFileFactory implements FileInstanceFactory {
 
 	public void setForcePollMode(boolean forcePollMode) {
 		this.forcePollMode = forcePollMode;
+	}
+
+	@Override
+	public void setGlobalFilenameFilter(FilenameFilter nameFilter) {
+		this.nameFilter = nameFilter;
 	}
 
 }
