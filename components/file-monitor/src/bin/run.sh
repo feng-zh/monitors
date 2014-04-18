@@ -27,4 +27,10 @@ echo "CLASSPATH: $CLASSPATH"
 
 echo "JAVA_OPTS: $JAVA_OPTS"
 
-/usr/java/latest/bin/java -Dmonitor.nio.slow=true $JAVA_OPTS com.hp.it.perf.monitor.files.hub.FilesHubMain "$@"
+if [ -f "/usr/java/latest/bin/java" ]; then
+	JAVA=/usr/java/latest/bin/java
+else
+	JAVA=java
+fi
+
+$JAVA -Dmonitor.nio.slow=true $JAVA_OPTS com.hp.it.perf.monitor.files.hub.FilesHubMain "$@"
