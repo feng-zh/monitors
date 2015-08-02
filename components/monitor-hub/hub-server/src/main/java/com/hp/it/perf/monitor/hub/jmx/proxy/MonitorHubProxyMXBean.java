@@ -9,6 +9,6 @@ public interface MonitorHubProxyMXBean {
 	public ObjectName createHubJmxClient(String jmxServiceURL, String username,
 			String password, ObjectName hubObjectName);
 
-	public List<ObjectName> listHubJmxClient();
+	public List<ObjectName> listHubJmxClients();
 
 }

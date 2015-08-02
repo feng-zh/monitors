@@ -2,8 +2,6 @@ package com.hp.it.perf.monitor.hub.jmx.proxy;
 
 import javax.management.ObjectName;
 
-import com.hp.it.perf.monitor.hub.MonitorEndpoint;
-
 public interface MonitorHubJmxClientProxyMXBean {
 
 	public String getJmxServiceURL();
@@ -12,12 +10,20 @@ public interface MonitorHubJmxClientProxyMXBean {
 
 	public ObjectName getHubObjectName();
 
+	public void start();
+
+	public void stop();
+	
+	public String getStatus();
+
 	public void destroy();
 
-	public MonitorEndpoint[] listEndpoints(String domainFilter);
+	public String[] listEndpoints(String domainFilter);
 
 	public String[] getDomains();
 
-	public ObjectName subscribeSingle(MonitorEndpoint endpoint);
+	public ObjectName createSubscriber(String endpoint);
+
+	public ObjectName[] listSubscribers(String endpoint);
 
 }

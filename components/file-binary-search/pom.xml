@@ -5,8 +5,8 @@
 	<artifactId>file-binary-search</artifactId>
 	<version>1.0.0-SNAPSHOT</version>
 	<properties>
-		<maven.compiler.source>1.6</maven.compiler.source>
-		<maven.compiler.target>1.6</maven.compiler.target>
+		<maven.compiler.source>1.7</maven.compiler.source>
+		<maven.compiler.target>1.7</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 	<build>
@@ -16,8 +16,6 @@
 				<version>2.3</version>
 				<configuration>
 					<attach>false</attach>
-					<!-- <descriptorRefs> <descriptorRef>jar-with-dependencies</descriptorRef> 
-						</descriptorRefs> -->
 					<appendAssemblyId>false</appendAssemblyId>
 					<descriptors>
 						<descriptor>src/main/assembly/package.xml</descriptor>
