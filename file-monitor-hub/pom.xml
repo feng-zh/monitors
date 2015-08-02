@@ -1,0 +1,62 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.hp.it.perf.monitor</groupId>
+    <artifactId>monitor-pom</artifactId>
+    <version>1</version>
+  </parent>
+  <artifactId>file-monitor-hub</artifactId>
+  <version>1.2.0-SNAPSHOT</version>
+  
+  <properties>
+  	<monitor.hub.version>1.0.1</monitor.hub.version>
+  </properties>
+  
+  <build>
+  	<plugins>
+		<plugin>
+			<artifactId>maven-assembly-plugin</artifactId>
+			<configuration>
+				<descriptors>
+					<descriptor>src/main/assembly/bin.xml</descriptor>
+				</descriptors>
+			</configuration>
+			<executions>
+				<execution>
+					<id>make-assembly</id>
+					<phase>package</phase>
+					<goals>
+						<goal>single</goal>
+					</goals>
+				</execution>
+			</executions>
+		</plugin>
+	</plugins>
+  </build>
+  
+  <dependencies>
+  	<dependency>
+  		<groupId>ch.qos.logback</groupId>
+  		<artifactId>logback-classic</artifactId>
+  		<version>1.0.9</version>
+  		<scope>runtime</scope>
+  		<optional>true</optional>
+  	</dependency>
+  	<dependency>
+  		<groupId>com.hp.it.perf.monitor</groupId>
+  		<artifactId>file-monitor</artifactId>
+  		<version>${project.version}</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>com.hp.it.perf.monitor.hub</groupId>
+  		<artifactId>hub-server</artifactId>
+  		<version>${monitor.hub.version}</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>com.hp.it.perf.monitor.hub</groupId>
+  		<artifactId>hub-client</artifactId>
+  		<version>${monitor.hub.version}</version>
+  		<optional>true</optional>
+  	</dependency>
+  </dependencies>
+</project>

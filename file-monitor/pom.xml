@@ -6,31 +6,8 @@
     <version>1</version>
   </parent>
   <artifactId>file-monitor</artifactId>
-  <version>1.1.1</version>
-  <properties>
-  	<monitor.hub.version>1.0.1</monitor.hub.version>
-  </properties>
-  <build>
-  	<plugins>
-		<plugin>
-			<artifactId>maven-assembly-plugin</artifactId>
-			<configuration>
-				<descriptors>
-					<descriptor>src/main/assembly/bin.xml</descriptor>
-				</descriptors>
-			</configuration>
-			<executions>
-				<execution>
-					<id>make-assembly</id>
-					<phase>package</phase>
-					<goals>
-						<goal>single</goal>
-					</goals>
-				</execution>
-			</executions>
-		</plugin>
-	</plugins>
-  </build>
+  <version>1.2.0-SNAPSHOT</version>
+
   <dependencies>
   	<dependency>
   		<groupId>org.slf4j</groupId>
@@ -41,8 +18,7 @@
   		<groupId>ch.qos.logback</groupId>
   		<artifactId>logback-classic</artifactId>
   		<version>1.0.9</version>
-  		<scope>runtime</scope>
-  		<optional>true</optional>
+  		<scope>test</scope>
   	</dependency>
   	<dependency>
   		<groupId>junit</groupId>
@@ -56,20 +32,5 @@
   		<version>1.3</version>
   		<scope>test</scope>
   	</dependency>
-  	<dependency>
-  		<groupId>com.hp.it.perf.monitor.hub</groupId>
-  		<artifactId>hub-server</artifactId>
-  		<version>${monitor.hub.version}</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>com.hp.it.perf.monitor.hub</groupId>
-  		<artifactId>hub-client</artifactId>
-  		<version>${monitor.hub.version}</version>
-  		<optional>true</optional>
-  	</dependency>
   </dependencies>
-  <dependencyManagement>
-  	<dependencies>
-  	</dependencies>
-  </dependencyManagement>
 </project>

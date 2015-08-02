@@ -18,5 +18,6 @@
 		<module>file-monitor</module>
 		<module>file-binary-search</module>
 		<module>monitor-hub</module>
+		<module>file-monitor-hub</module>
 	</modules>
 </project>
