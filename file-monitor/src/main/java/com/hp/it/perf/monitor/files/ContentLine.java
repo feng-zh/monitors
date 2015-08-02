@@ -32,4 +32,9 @@ public class ContentLine {
 		this.fileInstance = fileInstance;
 	}
 
+	public String toString() {
+		return (fileInstance != null ? fileInstance.getName() : "UNKNOWN")
+				+ "@" + getPosition() + ":" + new String(getLine());
+	}
+
 }

@@ -1,7 +1,14 @@
 package com.hp.it.perf.monitor.files;
 
-import static org.hamcrest.MatcherAssert.*;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
 import java.io.EOFException;
 import java.io.File;
@@ -10,6 +17,8 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
@@ -41,6 +50,8 @@ public class FolderTestCase {
 	public void tearDown() throws Exception {
 		factory.close();
 		helper.close();
+		// try to wait for monitor threads dead
+		Thread.sleep(100L);
 		helper.printThreads();
 		log.info("[End Test]");
 	}
@@ -262,18 +273,13 @@ public class FolderTestCase {
 		// prepare file content info
 		List<? extends FileInstance> infos = folder.listInstances();
 		assertThat(infos.size(), is(equalTo(2)));
-		int testFile1Index, testFile2Index;
-		if (infos.get(0).getName().equals(testFile1.getName())) {
-			testFile1Index = 0;
-			testFile2Index = 1;
-		} else {
-			testFile1Index = 1;
-			testFile2Index = 0;
-		}
-		assertThat(infos.get(testFile1Index).getMetadata(false).getPath(),
-				is(equalTo(testFile1.getPath())));
-		assertThat(infos.get(testFile2Index).getMetadata(false).getPath(),
-				is(equalTo(testFile2.getPath())));
+		Set<String> expected = new TreeSet<String>();
+		expected.add(infos.get(0).getMetadata(false).getPath());
+		expected.add(infos.get(1).getMetadata(false).getPath());
+		Set<String> current = new TreeSet<String>();
+		current.add(testFile1.getPath());
+		current.add(testFile2.getPath());
+		assertThat(expected, is(equalTo(current)));
 		// start rename simple
 		File testFile2x = helper.rename(testFile2, "sample_file3a.txt");
 		File testFile1x = helper.rename(testFile1, "sample_file2a.txt");
@@ -285,10 +291,13 @@ public class FolderTestCase {
 		assertThat(line.getLine(), is(helper.line("line2")));
 		infos = folder.listInstances();
 		assertThat(infos.size(), is(equalTo(2)));
-		assertThat(infos.get(testFile1Index).getMetadata(false).getPath(),
-				is(equalTo(testFile1x.getPath())));
-		assertThat(infos.get(testFile2Index).getMetadata(false).getPath(),
-				is(equalTo(testFile2x.getPath())));
+		expected = new TreeSet<String>();
+		expected.add(infos.get(0).getMetadata(false).getPath());
+		expected.add(infos.get(1).getMetadata(false).getPath());
+		current = new TreeSet<String>();
+		current.add(testFile1x.getPath());
+		current.add(testFile2x.getPath());
+		assertThat(expected, is(equalTo(current)));
 		// another
 		helper.echo("line3", testFile2x);
 		// force wait for file watch
@@ -297,10 +306,13 @@ public class FolderTestCase {
 		assertThat(line.getLine(), is(helper.line("line3")));
 		infos = folder.listInstances();
 		assertThat(infos.size(), is(equalTo(2)));
-		assertThat(infos.get(testFile1Index).getMetadata(false).getPath(),
-				is(equalTo(testFile1x.getPath())));
-		assertThat(infos.get(testFile2Index).getMetadata(false).getPath(),
-				is(equalTo(testFile2x.getPath())));
+		expected = new TreeSet<String>();
+		expected.add(infos.get(0).getMetadata(false).getPath());
+		expected.add(infos.get(1).getMetadata(false).getPath());
+		current = new TreeSet<String>();
+		current.add(testFile1x.getPath());
+		current.add(testFile2x.getPath());
+		assertThat(expected, is(equalTo(current)));
 		lineStream.close();
 	}
 
@@ -320,18 +332,13 @@ public class FolderTestCase {
 		// prepare file content info
 		List<? extends FileInstance> infos = folder.listInstances();
 		assertThat(infos.size(), is(equalTo(2)));
-		int testFile1Index, testFile2Index;
-		if (infos.get(0).getName().equals(testFile1.getName())) {
-			testFile1Index = 0;
-			testFile2Index = 1;
-		} else {
-			testFile1Index = 1;
-			testFile2Index = 0;
-		}
-		assertThat(infos.get(testFile1Index).getMetadata(false).getPath(),
-				is(equalTo(testFile1.getPath())));
-		assertThat(infos.get(testFile2Index).getMetadata(false).getPath(),
-				is(equalTo(testFile2.getPath())));
+		Set<String> expected = new TreeSet<String>();
+		expected.add(infos.get(0).getMetadata(false).getPath());
+		expected.add(infos.get(1).getMetadata(false).getPath());
+		Set<String> current = new TreeSet<String>();
+		current.add(testFile1.getPath());
+		current.add(testFile2.getPath());
+		assertThat(expected, is(equalTo(current)));
 		// start rename rotate
 		File testFile2x = helper.rename(testFile2, "sample_file3.txt");
 		File testFile1x = helper.rename(testFile1, "sample_file2.txt");
@@ -343,10 +350,13 @@ public class FolderTestCase {
 		assertThat(line.getLine(), is(helper.line("line2")));
 		infos = folder.listInstances();
 		assertThat(infos.size(), is(equalTo(2)));
-		assertThat(infos.get(testFile1Index).getMetadata(false).getPath(),
-				is(equalTo(testFile1x.getPath())));
-		assertThat(infos.get(testFile2Index).getMetadata(false).getPath(),
-				is(equalTo(testFile2x.getPath())));
+		expected = new TreeSet<String>();
+		expected.add(infos.get(0).getMetadata(false).getPath());
+		expected.add(infos.get(1).getMetadata(false).getPath());
+		current = new TreeSet<String>();
+		current.add(testFile1x.getPath());
+		current.add(testFile2x.getPath());
+		assertThat(expected, is(equalTo(current)));
 		// another
 		helper.echo("line3", testFile2x);
 		// force wait for file watch
@@ -355,10 +365,13 @@ public class FolderTestCase {
 		assertThat(line.getLine(), is(helper.line("line3")));
 		infos = folder.listInstances();
 		assertThat(infos.size(), is(equalTo(2)));
-		assertThat(infos.get(testFile1Index).getMetadata(false).getPath(),
-				is(equalTo(testFile1x.getPath())));
-		assertThat(infos.get(testFile2Index).getMetadata(false).getPath(),
-				is(equalTo(testFile2x.getPath())));
+		expected = new TreeSet<String>();
+		expected.add(infos.get(0).getMetadata(false).getPath());
+		expected.add(infos.get(1).getMetadata(false).getPath());
+		current = new TreeSet<String>();
+		current.add(testFile1x.getPath());
+		current.add(testFile2x.getPath());
+		assertThat(expected, is(equalTo(current)));
 		lineStream.close();
 	}
 
@@ -388,6 +401,7 @@ public class FolderTestCase {
 
 	@Test(timeout = 6000)
 	public void testFileRotate() throws Exception {
+		log.debug("Test on " + getClass().getSimpleName() + ".testFileRotate()");
 		File testFile1 = helper
 				.copy(new File("src/test/data/sample_file1.txt"));
 		File testFile2 = helper.copy(

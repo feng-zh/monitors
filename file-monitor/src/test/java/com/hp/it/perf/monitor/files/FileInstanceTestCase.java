@@ -240,6 +240,7 @@ public class FileInstanceTestCase {
 
 	@Test(timeout = 4000)
 	public void testUniqueFileRename() throws Exception {
+		log.debug("Test on testUniqueFileRename()");
 		File testFile = helper.copy(new File("src/test/data/sample_file1.txt"));
 		FileInstance file = factory.getFileInstance(testFile.getPath());
 		ContentLineStream lineStream = ((ContentLineStreamProvider) file)
