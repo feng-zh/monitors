@@ -45,7 +45,7 @@ public class MonitorFileFactory implements FileInstanceFactory {
 
 	private boolean forcePollMode;
 
-	private FilenameFilter nameFilter;
+	private FilenameFilter globalNameFilter;
 
 	@Override
 	public FileInstance getFileInstance(String path) throws IOException,
@@ -63,8 +63,8 @@ public class MonitorFileFactory implements FileInstanceFactory {
 	}
 
 	@Override
-	public FileSet getFileSet(String path) throws IOException,
-			FileNotFoundException {
+	public FileSet getFileSet(String path, FilenameFilter nameFilter)
+			throws IOException, FileNotFoundException {
 		// TODO check IO performance
 		File requestFolder = new File(path);
 		File canonicalFolder = requestFolder.getCanonicalFile();
@@ -74,13 +74,36 @@ public class MonitorFileFactory implements FileInstanceFactory {
 			fileFolder = new MonitorFileFolder(requestFolder, strategy,
 					statistics,
 					multiMonitorService.getMonitorService(requestFolder));
-			fileFolder.setFilenameFilter(nameFilter);
+			fileFolder.setFilenameFilter(prepareFilenameFilter(nameFilter));
 			fileFolder.init();
 			statistics.fileSetCount().increment();
 			return fileFolder;
 		} else {
 			throw new FileNotFoundException(path);
 		}
+	}
+	
+	private FilenameFilter prepareFilenameFilter(final FilenameFilter nameFilter) {
+		if (nameFilter == null) {
+			return globalNameFilter;
+		} else {
+			return new FilenameFilter() {
+
+				@Override
+				public boolean accept(String name) {
+					return nameFilter.accept(name)
+							&& (globalNameFilter != null ? globalNameFilter
+									.accept(name) : true);
+				}
+			};
+		}
+	}
+
+	@Override
+	public FileSet getFileSet(String path) throws IOException,
+			FileNotFoundException {
+		// TODO if previous one has name filter?
+		return getFileSet(path, null);
 	}
 
 	private boolean isInclude(File file) {
@@ -108,8 +131,8 @@ public class MonitorFileFactory implements FileInstanceFactory {
 	}
 
 	@Override
-	public void setGlobalFilenameFilter(FilenameFilter nameFilter) {
-		this.nameFilter = nameFilter;
+	public void setGlobalFilenameFilter(FilenameFilter globalNameFilter) {
+		this.globalNameFilter = globalNameFilter;
 	}
 
 }

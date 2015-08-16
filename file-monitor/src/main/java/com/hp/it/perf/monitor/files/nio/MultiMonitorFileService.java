@@ -62,7 +62,7 @@ class MultiMonitorFileService implements Closeable {
 			log.info("create watch service for store [({}){}]: {}",
 					new Object[] { store.type(), store.name(),
 							watchService.getClass().getName() });
-			if (isFuseType(store)) {
+			if (isFuseType(store) || isWindows(store)) {
 				monitorService
 						.setKeyDetectorFactory(new FileKeyDetectorFactory() {
 
@@ -109,6 +109,10 @@ class MultiMonitorFileService implements Closeable {
 
 	protected boolean isFuseType(FileStore store) {
 		return store.type().startsWith("fuse");
+	}
+	
+	protected boolean isWindows(FileStore store) {
+		return store.type().startsWith("NTFS");
 	}
 
 	public MonitorFileService getMonitorService(File folder) throws IOException {

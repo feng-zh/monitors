@@ -182,7 +182,8 @@ class ContentBasedFileKeyDetector implements FileKeyDetector {
 					BasicFileAttributes.class);
 			modified = attr.lastModifiedTime().toMillis();
 			length = attr.size();
-			nativeKey = new FileKey(attr.fileKey());
+			Object fileKey = attr.fileKey();
+			nativeKey = new FileKey(fileKey == null ? name.toRealPath().toString() : fileKey);
 			regularFile = attr.isRegularFile();
 		}
 

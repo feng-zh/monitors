@@ -6,8 +6,10 @@ import java.nio.file.WatchEvent;
 import java.nio.file.WatchEvent.Kind;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -211,7 +213,10 @@ class MonitorFolderEntry {
 		}
 	}
 
+	// Also perform duplicate events remove for following case
+	// ... CREATE ... MODIFY ... on same path => ... CREATE .. 
 	private List<WatchEvent<?>> filterEventsByName(List<WatchEvent<?>> events) {
+		Set<Path> created = new HashSet<Path>(events.size());
 		List<WatchEvent<?>> newEvents = new ArrayList<WatchEvent<?>>(
 				events.size());
 		for (int i = 0, n = events.size(); i < n; i++) {
@@ -220,9 +225,17 @@ class MonitorFolderEntry {
 				continue;
 			}
 			Path path = (Path) event.context();
-			if (folder.isIncluded(path.toFile())) {
-				newEvents.add(event);
+			if (!folder.isIncluded(path.toFile())) {
+				continue;
 			}
+			if (event.kind() == StandardWatchEventKinds.ENTRY_CREATE){
+				created.add(path);
+			} else if (event.kind() == StandardWatchEventKinds.ENTRY_MODIFY && created.contains(path)) {
+				// ignore this modify event because of create event
+				log.trace("Ignore modify event because of create event present on {}", path);
+				continue;
+			}
+			newEvents.add(event);
 		}
 		return newEvents;
 	}

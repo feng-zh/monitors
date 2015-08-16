@@ -11,6 +11,9 @@ public interface FileInstanceFactory extends Closeable {
 
 	public FileSet getFileSet(String path) throws IOException,
 			FileNotFoundException;
+	
+	public FileSet getFileSet(String path, FilenameFilter filter) throws IOException,
+		FileNotFoundException;
 
 	public void setFileClusterStrategy(FileClusterStrategy strategy);
 

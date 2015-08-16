@@ -265,6 +265,9 @@ class RandomAccessFileReader implements Closeable {
 				file, position, lazyOpen ? "lazy" : "now", initOffset });
 		if (!lazyOpen) {
 			open0();
+			if (len == this.position) {
+				tryKeepAlive();
+			}
 		}
 	}
 

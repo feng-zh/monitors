@@ -53,8 +53,8 @@ class MonitorFileStream implements ContentLineStream,
 		reader = new RandomAccessFileReader(fileInstance.getFile());
 		fileInstance.getStatistics().ioReaderCount().increment();
 		reader.setStatisticis(fileInstance.getStatistics());
-		reader.open(initOffset, lazyOpen);
 		reader.setKeepAlive(idleTimeout);
+		reader.open(initOffset, lazyOpen);
 		fileInstance.addFileInstanceChangeListener(this);
 		if (monitorable) {
 			fileInstance.addFileContentChangeListener(this);
